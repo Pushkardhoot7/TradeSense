@@ -1,0 +1,610 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Explorer — 360° Real Life Analysis{% endblock %}
+{% block page_title %}🔎 Stock Explorer & In-Real-Life Inspector{% endblock %}
+{% block page_subtitle %}Select any asset to inspect its full discrete mathematics profile, correlation partners, and portfolio memberships{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Asset Selector Header Card -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div class="space-y-1">
+      <div class="text-[11px] uppercase font-bold tracking-wider text-slate-400">Interactive 360° Inspector</div>
+      <h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+        <span id="selected-symbol-title">TCS.NS</span>
+        <span id="selected-company-title" class="text-sm font-normal text-slate-500">— Tata Consultancy Services</span>
+      </h2>
+    </div>
+
+    <!-- Stock Picker Dropdown -->
+    <div class="flex items-center gap-3 w-full md:w-auto">
+      <label class="text-xs font-bold text-slate-600 shrink-0">Switch Stock:</label>
+      <select id="stock-picker" onchange="onStockChange(this.value)" class="w-full md:w-64 px-4 py-2 rounded-xl border border-slate-300 bg-slate-50 text-xs font-bold text-slate-800 shadow-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+        <option value="TCS.NS">TCS.NS — Tata Consultancy</option>
+        <option value="INFY.NS">INFY.NS — Infosys</option>
+        <option value="HDFCBANK.NS">HDFCBANK.NS — HDFC Bank</option>
+        <option value="RELIANCE.NS">RELIANCE.NS — Reliance Industries</option>
+        <option value="WIPRO.NS">WIPRO.NS — Wipro</option>
+        <option value="HCLTECH.NS">HCLTECH.NS — HCL Tech</option>
+        <option value="ICICIBANK.NS">ICICIBANK.NS — ICICI Bank</option>
+        <option value="KOTAKBANK.NS">KOTAKBANK.NS — Kotak Bank</option>
+        <option value="LTIM.NS">LTIM.NS — LTIMindtree</option>
+        <option value="AXISBANK.NS">AXISBANK.NS — Axis Bank</option>
+        <option value="TATAMOTORS.NS">TATAMOTORS.NS — Tata Motors</option>
+        <option value="BAJFINANCE.NS">BAJFINANCE.NS — Bajaj Finance</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Primary Metric Badges Row -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Latest Price</div>
+      <div id="stat-price" class="text-xl font-black text-slate-900 mt-1">₹3,450.00</div>
+      <div id="stat-sector" class="text-[11px] text-slate-500 mt-0.5">IT Sector</div>
+    </div>
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Annual Return</div>
+      <div id="stat-return" class="text-xl font-black text-emerald-600 mt-1">+16.4%</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">1-Year Horizon</div>
+    </div>
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Volatility (Risk σ)</div>
+      <div id="stat-risk" class="text-xl font-black text-slate-800 mt-1">15.2%</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Annualized Std Dev</div>
+    </div>
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Sharpe Ratio</div>
+      <div id="stat-sharpe" class="text-xl font-black text-indigo-600 mt-1">1.45</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Rf = 5.0%</div>
+    </div>
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Color Group</div>
+      <div id="stat-group" class="text-xl font-black text-purple-600 mt-1">Group 1</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Independent Set</div>
+    </div>
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Poset Standing</div>
+      <div id="stat-poset" class="text-xl font-black text-amber-600 mt-1">Maximal 👑</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Dominance Rank</div>
+    </div>
+  </div>
+
+  <!-- Detailed 4-Quadrant Analysis Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Quadrant 1: Correlation Partners in G=(V,E) -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-base">🔗</span>
+          <h3 class="text-sm font-bold text-slate-800">Correlation Partners in Graph G=(V,E)</h3>
+        </div>
+        <span class="text-[11px] font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-bold">Threshold r ≥ 0.70</span>
+      </div>
+
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Stocks connected to <strong id="partner-stock-name">TCS.NS</strong> in the market network share strong co-movement. Diversifying across unconnected stocks reduces portfolio variance.
+      </p>
+
+      <div id="partners-list" class="space-y-2 font-mono text-xs">
+        <!-- Populated via JS -->
+      </div>
+    </div>
+
+    <!-- Quadrant 2: Dominance Relations & Partial Order -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-base">⚖️</span>
+          <h3 class="text-sm font-bold text-slate-800">Dominance Relation Standing</h3>
+        </div>
+        <span class="text-[11px] font-mono text-purple-600 bg-purple-50 px-2 py-0.5 rounded font-bold">A ≽ B (Higher Ret, Lower Risk)</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+          <div class="text-[10px] font-bold uppercase text-emerald-700">Stocks Dominated By This Asset</div>
+          <div id="dominates-count" class="text-lg font-black text-slate-800">3 Stocks</div>
+          <div id="dominates-list" class="text-[11px] text-slate-600 font-mono mt-1">Loading...</div>
+        </div>
+
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+          <div class="text-[10px] font-bold uppercase text-rose-700">Stocks That Dominate This Asset</div>
+          <div id="dominated-by-count" class="text-lg font-black text-slate-800">0 Stocks</div>
+          <div id="dominated-by-list" class="text-[11px] text-slate-600 font-mono mt-1">None (Pareto Optimal)</div>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-500 leading-relaxed">
+        A stock with 0 dominating parents is Pareto-optimal. It offers superior risk-return efficiency compared to its peer universe.
+      </p>
+    </div>
+
+    <!-- Quadrant 3: Portfolio Appearances -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-base">💼</span>
+          <h3 class="text-sm font-bold text-slate-800">Top Portfolios Containing This Stock</h3>
+        </div>
+        <span class="text-[11px] font-mono text-amber-600 bg-amber-50 px-2 py-0.5 rounded font-bold">Combinatorics C(n,k)</span>
+      </div>
+
+      <div id="portfolio-memberships" class="space-y-2.5">
+        <!-- Populated via JS -->
+      </div>
+    </div>
+
+    <!-- Quadrant 4: Contextual Market News -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-base">📰</span>
+          <h3 class="text-sm font-bold text-slate-800">Recent Headlines & Company Sentiment</h3>
+        </div>
+        <a href="/market-news" class="text-xs text-indigo-600 font-bold hover:underline">All News →</a>
+      </div>
+
+      <div id="stock-news-list" class="space-y-3">
+        <!-- Populated via JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Technical Analysis Section (SMA, EMA, RSI, MACD, Bollinger Bands) -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+      <div class="flex items-center gap-2">
+        <span class="text-base">📈</span>
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Technical Analysis Indicators</h3>
+          <p class="text-[11px] text-slate-500">Mathematical trend, momentum, and volatility indicators computed over historical closes</p>
+        </div>
+      </div>
+      <span class="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+        Descriptive Analytical Tool (Not Buy/Sell Guarantee)
+      </span>
+    </div>
+
+    <!-- Technical Metrics Grid -->
+    <div id="tech-metrics-grid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+        <div class="text-[10px] uppercase font-bold text-slate-400">RSI (14)</div>
+        <div id="tech-rsi" class="text-xl font-black text-slate-900 mt-1 font-mono">—</div>
+        <div id="tech-rsi-cond" class="text-[10px] text-slate-500 mt-0.5">Calculating...</div>
+      </div>
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+        <div class="text-[10px] uppercase font-bold text-slate-400">SMA 20 / 50</div>
+        <div id="tech-sma20" class="text-sm font-black text-slate-800 mt-1 font-mono">—</div>
+        <div id="tech-sma50" class="text-[10px] text-slate-500 mt-0.5 font-mono">SMA50: —</div>
+      </div>
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+        <div class="text-[10px] uppercase font-bold text-slate-400">EMA 20 / 50</div>
+        <div id="tech-ema20" class="text-sm font-black text-slate-800 mt-1 font-mono">—</div>
+        <div id="tech-ema50" class="text-[10px] text-slate-500 mt-0.5 font-mono">EMA50: —</div>
+      </div>
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+        <div class="text-[10px] uppercase font-bold text-slate-400">MACD (12,26,9)</div>
+        <div id="tech-macd" class="text-sm font-black text-indigo-600 mt-1 font-mono">—</div>
+        <div id="tech-macd-hist" class="text-[10px] text-slate-500 mt-0.5 font-mono">Hist: —</div>
+      </div>
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+        <div class="text-[10px] uppercase font-bold text-slate-400">Bollinger Upper</div>
+        <div id="tech-bb-upper" class="text-sm font-black text-slate-800 mt-1 font-mono">—</div>
+        <div id="tech-bb-lower" class="text-[10px] text-slate-500 mt-0.5 font-mono">Lower: —</div>
+      </div>
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+        <div class="text-[10px] uppercase font-bold text-slate-400">ATR (14) / VWAP</div>
+        <div id="tech-atr" class="text-sm font-black text-slate-800 mt-1 font-mono">—</div>
+        <div id="tech-vwap" class="text-[10px] text-slate-500 mt-0.5 font-mono">VWAP: —</div>
+      </div>
+    </div>
+
+    <!-- Technical Chart Container -->
+    <div class="pt-2">
+      <div id="tech-chart" class="w-full h-[320px] rounded-xl overflow-hidden bg-slate-50"></div>
+    </div>
+  </div>
+
+  <!-- Fundamental Analysis & Financial Health Section -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+      <div class="flex items-center gap-2">
+        <span class="text-base">🏢</span>
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Fundamental Ratios & Financial Health</h3>
+          <p class="text-[11px] text-slate-500">Valuation multiples, capital efficiency, leverage, and liquidity consensus</p>
+        </div>
+      </div>
+      <span class="text-[10px] font-mono text-slate-400">Data Source: yfinance Consensus / Regulatory Filings</span>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+      <!-- Valuation -->
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+        <h4 class="font-bold text-slate-800 text-xs flex items-center justify-between">
+          <span>Valuation Multiples</span>
+          <span class="text-[10px] font-normal text-slate-400">Trailing / Forward</span>
+        </h4>
+        <div class="space-y-1.5 font-mono">
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-sans">P/E Ratio:</span>
+            <span id="fund-pe" class="font-bold text-slate-800">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-sans">P/B Ratio:</span>
+            <span id="fund-pb" class="font-bold text-slate-800">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-sans">EV / EBITDA:</span>
+            <span id="fund-ev" class="font-bold text-slate-800">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-sans">Market Cap:</span>
+            <span id="fund-mcap" class="font-bold text-slate-800">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profitability -->
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+        <h4 class="font-bold text-slate-800 text-xs flex items-center justify-between">
+          <span>Profitability & Margins</span>
+          <span class="text-[10px] font-normal text-slate-400">TTM</span>
+        </h4>
+        <div class="space-y-1.5 font-mono">
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-sans">Return on Equity (ROE):</span>
+            <span id="fund-roe" class="font-bold text-emerald-600">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-sans">Return on Assets (ROA):</span>
+            <span id="fund-roa" class="font-bold text-slate-800">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-sans">Net Profit Margin:</span>
+            <span id="fund-net-margin" class="font-bold text-emerald-600">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-sans">Operating Margin:</span>
+            <span id="fund-op-margin" class="font-bold text-slate-800">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Financial Health -->
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+        <h4 class="font-bold text-slate-800 text-xs flex items-center justify-between">
+          <span>Financial Health & Leverage</span>
+          <span class="text-[10px] font-normal text-slate-400">Balance Sheet</span>
+        </h4>
+        <div class="space-y-1.5 font-mono">
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-sans">Debt to Equity:</span>
+            <span id="fund-de" class="font-bold text-slate-800">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-sans">Current Ratio:</span>
+            <span id="fund-current-ratio" class="font-bold text-slate-800">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-sans">Quick Ratio:</span>
+            <span id="fund-quick-ratio" class="font-bold text-slate-800">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500 font-sans">Dividend Yield:</span>
+            <span id="fund-div-yield" class="font-bold text-indigo-600">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allStocksData = [];
+let allCorrelationData = null;
+let allColoringData = null;
+let allRelationData = null;
+let allPortfolios = [];
+let allNewsItems = [];
+
+async function initExplorer() {
+  try {
+    const [stocks, corr, coloring, rel, portfolios, news] = await Promise.all([
+      TradeSense.apiCall('/api/stocks'),
+      TradeSense.apiCall('/api/correlation'),
+      TradeSense.apiCall('/api/coloring'),
+      TradeSense.apiCall('/api/relation'),
+      TradeSense.apiCall('/api/portfolios'),
+      TradeSense.apiCall('/api/market/news')
+    ]);
+
+    allStocksData = stocks || [];
+    allCorrelationData = corr || {};
+    allColoringData = coloring || {};
+    allRelationData = rel || {};
+    allPortfolios = portfolios?.portfolios || [];
+    allNewsItems = news?.news || [];
+
+    // Populate dropdown with actual tickers
+    const picker = document.getElementById('stock-picker');
+    if (picker && allStocksData.length > 0) {
+      picker.innerHTML = allStocksData.map(s => `
+        <option value="${s.symbol}">${s.symbol} — ${s.company_name || s.symbol}</option>
+      `).join('');
+    }
+
+    // Check URL param or default to first
+    const pathParts = window.location.pathname.split('/');
+    const urlSymbol = pathParts[pathParts.length - 1];
+    const defaultSymbol = (urlSymbol && urlSymbol !== 'stock-explorer' && urlSymbol !== 'stock') 
+      ? decodeURIComponent(urlSymbol) 
+      : (allStocksData[0]?.symbol || 'TCS.NS');
+
+    if (picker) picker.value = defaultSymbol;
+    loadStockDetails(defaultSymbol);
+  } catch(e) {
+    console.error("Error initialising stock explorer:", e);
+  }
+}
+
+function onStockChange(symbol) {
+  loadStockDetails(symbol);
+}
+
+function loadStockDetails(symbol) {
+  const stock = allStocksData.find(s => s.symbol === symbol) || { symbol: symbol, return_pct: 12.0, risk_pct: 16.0, sharpe: 1.1 };
+
+  // Headers
+  document.getElementById('selected-symbol-title').textContent = stock.symbol;
+  document.getElementById('selected-company-title').textContent = '— ' + (stock.company_name || stock.sector || 'Equities');
+  document.getElementById('partner-stock-name').textContent = stock.symbol;
+
+  // KPIs
+  document.getElementById('stat-price').textContent = TradeSense.formatCurrency(stock.latest_price || 0);
+  document.getElementById('stat-sector').textContent = stock.sector || 'Equities';
+  
+  const retEl = document.getElementById('stat-return');
+  retEl.textContent = TradeSense.formatPercent(stock.return_pct || 0);
+  retEl.className = `text-xl font-black ${(stock.return_pct || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'} mt-1`;
+
+  document.getElementById('stat-risk').textContent = (stock.risk_pct || 0).toFixed(1) + '%';
+  document.getElementById('stat-sharpe').textContent = (stock.sharpe || 0).toFixed(2);
+
+  const colorGroup = allColoringData.coloring_dict ? allColoringData.coloring_dict[symbol] : 1;
+  document.getElementById('stat-group').textContent = `Group ${colorGroup !== undefined ? colorGroup : '—'}`;
+
+  const nonDominated = (allRelationData.non_dominated || []).includes(symbol);
+  document.getElementById('stat-poset').textContent = nonDominated ? '👑 Non-Dominated' : 'Standard Tier';
+
+  // Quadrant 1: Correlation Partners
+  renderPartners(symbol);
+
+  // Quadrant 2: Dominance
+  renderDominance(symbol, stock);
+
+  // Quadrant 3: Portfolios
+  renderPortfolios(symbol);
+
+  // Quadrant 4: News
+  renderStockNews(symbol);
+
+  // Technicals & Fundamentals 360° Panels
+  loadTechnicalsAndFundamentals(symbol);
+}
+
+function renderPartners(symbol) {
+  const container = document.getElementById('partners-list');
+  if (!container) return;
+
+  const pairs = allCorrelationData.strong_pairs || [];
+  const related = pairs.filter(p => p.stock_a === symbol || p.stock_b === symbol);
+
+  if (related.length === 0) {
+    container.innerHTML = `
+      <div class="p-3 bg-slate-50 rounded-xl text-slate-500 text-xs">
+        No correlation partners above threshold r ≥ 0.70. This asset exhibits high diversification independence.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = related.map(p => {
+    const other = p.stock_a === symbol ? p.stock_b : p.stock_a;
+    return `
+      <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+        <span class="text-slate-800 font-bold">${other}</span>
+        <span class="font-bold text-amber-600 font-mono">r = ${(p.correlation || 0).toFixed(3)}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderDominance(symbol, stock) {
+  const relPairs = allRelationData.relation_pairs || allRelationData.dominance_pairs || [];
+  const dominates = relPairs.filter(p => (Array.isArray(p) ? p[0] : p.dominator) === symbol).map(p => Array.isArray(p) ? p[1] : p.dominated);
+  const dominatedBy = relPairs.filter(p => (Array.isArray(p) ? p[1] : p.dominated) === symbol).map(p => Array.isArray(p) ? p[0] : p.dominator);
+
+  document.getElementById('dominates-count').textContent = `${dominates.length} Stocks`;
+  document.getElementById('dominates-list').textContent = dominates.length > 0 ? dominates.join(', ') : 'None';
+
+  document.getElementById('dominated-by-count').textContent = `${dominatedBy.length} Stocks`;
+  document.getElementById('dominated-by-list').textContent = dominatedBy.length > 0 ? dominatedBy.join(', ') : 'None (Pareto-Optimal Frontier)';
+}
+
+function renderPortfolios(symbol) {
+  const container = document.getElementById('portfolio-memberships');
+  if (!container) return;
+
+  const containing = allPortfolios.filter(p => (p.portfolio || []).includes(symbol)).slice(0, 3);
+
+  if (containing.length === 0) {
+    container.innerHTML = `<div class="text-xs text-slate-400 p-2">Evaluated in portfolio combinatorial space.</div>`;
+    return;
+  }
+
+  container.innerHTML = containing.map((p, idx) => `
+    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+      <div>
+        <div class="font-bold text-xs text-slate-800">Rank #${p.rank || idx + 1}: ${(p.portfolio || []).join(' + ')}</div>
+        <div class="text-[10px] text-slate-500">Exp. Return: +${(p.raw_return || 0).toFixed(1)}% · Risk: ${(p.raw_risk || 0).toFixed(1)}%</div>
+      </div>
+      <span class="font-mono font-black text-xs px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+        ${(p.dm_score || 0).toFixed(1)} DM
+      </span>
+    </div>
+  `).join('');
+}
+
+function renderStockNews(symbol) {
+  const container = document.getElementById('stock-news-list');
+  if (!container) return;
+
+  const filtered = allNewsItems.filter(n => n.symbol === symbol);
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="p-3 bg-slate-50 rounded-xl text-slate-500 text-xs">
+        No active news stories matching ${symbol}. Showing broad sector intelligence.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filtered.map(n => `
+    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+      <div class="flex items-center justify-between text-[10px]">
+        <span class="font-bold text-slate-500">${n.source}</span>
+        <span class="font-bold text-emerald-600">● ${n.sentiment}</span>
+      </div>
+      <div class="text-xs font-bold text-slate-900">${n.headline}</div>
+    </div>
+  `).join('');
+}
+
+async function loadTechnicalsAndFundamentals(symbol) {
+  try {
+    const [techRes, fundRes] = await Promise.all([
+      TradeSense.apiCall(`/api/stocks/${encodeURIComponent(symbol)}/technicals?period=6mo`).catch(() => null),
+      TradeSense.apiCall(`/api/stocks/${encodeURIComponent(symbol)}/fundamentals`).catch(() => null)
+    ]);
+
+    // Populate Technicals
+    if (techRes && techRes.latest) {
+      const t = techRes.latest;
+      document.getElementById('tech-rsi').textContent = t.rsi != null ? t.rsi.toFixed(1) : '—';
+      document.getElementById('tech-rsi-cond').textContent = t.rsi_condition || '—';
+      document.getElementById('tech-sma20').textContent = t.sma20 ? `₹${t.sma20.toFixed(1)}` : '—';
+      document.getElementById('tech-sma50').textContent = t.sma50 ? `SMA50: ₹${t.sma50.toFixed(1)}` : 'SMA50: —';
+      document.getElementById('tech-ema20').textContent = t.ema20 ? `₹${t.ema20.toFixed(1)}` : '—';
+      document.getElementById('tech-ema50').textContent = t.ema50 ? `EMA50: ₹${t.ema50.toFixed(1)}` : 'EMA50: —';
+      document.getElementById('tech-macd').textContent = t.macd ? t.macd.toFixed(2) : '—';
+      document.getElementById('tech-macd-hist').textContent = t.macd_hist ? `Hist: ${t.macd_hist.toFixed(2)}` : 'Hist: —';
+      document.getElementById('tech-bb-upper').textContent = t.bb_upper ? `₹${t.bb_upper.toFixed(1)}` : '—';
+      document.getElementById('tech-bb-lower').textContent = t.bb_lower ? `Lower: ₹${t.bb_lower.toFixed(1)}` : 'Lower: —';
+      document.getElementById('tech-atr').textContent = t.atr ? `ATR: ₹${t.atr.toFixed(1)}` : '—';
+      document.getElementById('tech-vwap').textContent = t.vwap ? `VWAP: ₹${t.vwap.toFixed(1)}` : 'VWAP: —';
+
+      // Render Technical Plotly Chart
+      renderTechChart(techRes.series, symbol);
+    }
+
+    // Populate Fundamentals
+    if (fundRes) {
+      const v = fundRes.valuation || {};
+      const p = fundRes.profitability || {};
+      const f = fundRes.financial_health || {};
+
+      document.getElementById('fund-pe').textContent = v.pe_ratio != null ? `${v.pe_ratio}x` : '—';
+      document.getElementById('fund-pb').textContent = v.pb_ratio != null ? `${v.pb_ratio}x` : '—';
+      document.getElementById('fund-ev').textContent = v.ev_ebitda != null ? `${v.ev_ebitda}x` : '—';
+      document.getElementById('fund-mcap').textContent = v.market_cap ? `₹${(v.market_cap / 1e7).toFixed(0)} Cr` : '—';
+
+      document.getElementById('fund-roe').textContent = p.roe_pct != null ? `${p.roe_pct}%` : '—';
+      document.getElementById('fund-roa').textContent = p.roa_pct != null ? `${p.roa_pct}%` : '—';
+      document.getElementById('fund-net-margin').textContent = p.net_margin_pct != null ? `${p.net_margin_pct}%` : '—';
+      document.getElementById('fund-op-margin').textContent = p.operating_margin_pct != null ? `${p.operating_margin_pct}%` : '—';
+
+      document.getElementById('fund-de').textContent = f.debt_to_equity != null ? `${f.debt_to_equity}` : '—';
+      document.getElementById('fund-current-ratio').textContent = f.current_ratio != null ? `${f.current_ratio}` : '—';
+      document.getElementById('fund-quick-ratio').textContent = f.quick_ratio != null ? `${f.quick_ratio}` : '—';
+      document.getElementById('fund-div-yield').textContent = f.dividend_yield_pct != null ? `${f.dividend_yield_pct}%` : '0.0%';
+    }
+  } catch(e) {
+    console.error("Error loading technicals/fundamentals:", e);
+  }
+}
+
+function renderTechChart(series, symbol) {
+  const container = document.getElementById('tech-chart');
+  if (!container || !series || !series.dates) return;
+
+  const traces = [
+    {
+      x: series.dates,
+      y: series.close,
+      type: 'scatter',
+      mode: 'lines',
+      name: `${symbol} Close`,
+      line: { color: '#0f172a', width: 2 }
+    },
+    {
+      x: series.dates,
+      y: series.sma20,
+      type: 'scatter',
+      mode: 'lines',
+      name: 'SMA 20',
+      line: { color: '#4f46e5', width: 1.5 }
+    },
+    {
+      x: series.dates,
+      y: series.sma50,
+      type: 'scatter',
+      mode: 'lines',
+      name: 'SMA 50',
+      line: { color: '#f59e0b', width: 1.5, dash: 'dot' }
+    },
+    {
+      x: series.dates,
+      y: series.bb_upper,
+      type: 'scatter',
+      mode: 'lines',
+      name: 'Bollinger Upper',
+      line: { color: '#94a3b8', width: 1, dash: 'dash' }
+    },
+    {
+      x: series.dates,
+      y: series.bb_lower,
+      type: 'scatter',
+      mode: 'lines',
+      name: 'Bollinger Lower',
+      line: { color: '#94a3b8', width: 1, dash: 'dash' },
+      fill: 'tonexty',
+      fillcolor: 'rgba(148, 163, 184, 0.08)'
+    }
+  ];
+
+  const layout = {
+    margin: { t: 30, r: 20, l: 50, b: 35 },
+    showlegend: true,
+    legend: { orientation: 'h', y: 1.15, x: 0.1, font: { size: 10 } },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: 'transparent',
+    xaxis: { showgrid: true, gridcolor: '#f1f5f9', tickfont: { size: 10 } },
+    yaxis: { showgrid: true, gridcolor: '#f1f5f9', tickfont: { size: 10 }, tickprefix: '₹' },
+    hovermode: 'x unified'
+  };
+
+  Plotly.newPlot('tech-chart', traces, layout, { responsive: true, displayModeBar: false });
+}
+
+document.addEventListener('DOMContentLoaded', initExplorer);
+</script>
+{% endblock %}

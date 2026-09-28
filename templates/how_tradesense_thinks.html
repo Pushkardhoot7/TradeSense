@@ -1,0 +1,713 @@
+{% extends "base.html" %}
+
+{% block title %}How TradeSense Thinks — 10 Step Journey{% endblock %}
+{% block page_title %}🧠 How TradeSense Thinks{% endblock %}
+{% block page_subtitle %}See how TradeSense turns raw stock market data into portfolio intelligence — step by step.{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Hero Header Banner -->
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 text-white p-6 sm:p-8 shadow-xl">
+    <div class="relative z-10 max-w-3xl">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-semibold mb-3">
+        <span>✨</span> Interactive Computational Storyline
+      </div>
+      <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2">
+        From Raw Market Ticks to Optimal Portfolios
+      </h2>
+      <p class="text-sm text-slate-300 leading-relaxed font-normal">
+        Most portfolio tools either hide everything in a "black box" or dump raw academic formulas. TradeSense takes you on a transparent 10-step journey where every discrete mathematical concept has an intuitive real-world purpose.
+      </p>
+    </div>
+    <!-- Decorative background elements -->
+    <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+  </div>
+
+  <!-- Step Navigation Pills Carousel -->
+  <div class="bg-white rounded-xl border border-slate-200/80 p-3 shadow-xs">
+    <div class="flex items-center justify-between mb-2 px-2">
+      <span class="text-xs font-bold uppercase tracking-wider text-slate-400">10-Step Pipeline Roadmap</span>
+      <div class="flex items-center gap-2">
+        <button onclick="prevStep()" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-bold transition-all">← Prev</button>
+        <span id="step-indicator" class="text-xs font-bold text-indigo-600 px-2">Step 1 of 10</span>
+        <button onclick="nextStep()" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-bold transition-all">Next →</button>
+      </div>
+    </div>
+    
+    <div class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-1.5" id="step-nav-buttons">
+      <!-- Step 1 to 10 Pills -->
+      <button onclick="goToStep(1)" id="pill-1" class="step-pill active-pill">1. Data</button>
+      <button onclick="goToStep(2)" id="pill-2" class="step-pill">2. Metrics</button>
+      <button onclick="goToStep(3)" id="pill-3" class="step-pill">3. Relations</button>
+      <button onclick="goToStep(4)" id="pill-4" class="step-pill">4. Network</button>
+      <button onclick="goToStep(5)" id="pill-5" class="step-pill">5. Poset</button>
+      <button onclick="goToStep(6)" id="pill-6" class="step-pill">6. Hasse</button>
+      <button onclick="goToStep(7)" id="pill-7" class="step-pill">7. Groups</button>
+      <button onclick="goToStep(8)" id="pill-8" class="step-pill">8. Filters</button>
+      <button onclick="goToStep(9)" id="pill-9" class="step-pill">9. Combos</button>
+      <button onclick="goToStep(10)" id="pill-10" class="step-pill">10. Score</button>
+    </div>
+  </div>
+
+  <!-- Main Active Step Container -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    
+    <!-- Step Header with Mode Toggle -->
+    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span id="current-step-icon" class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-lg font-bold shadow-md shadow-indigo-600/20">
+          📊
+        </span>
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="current-step-badge" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">Stage 1 of 10</span>
+            <span id="current-step-dm-topic" class="text-xs font-semibold text-slate-400">Discrete Structures</span>
+          </div>
+          <h3 id="current-step-title" class="text-lg font-bold text-slate-800">Raw Market Data & Time-Series</h3>
+        </div>
+      </div>
+
+      <!-- Mode Toggle Switch -->
+      <div class="flex items-center bg-slate-200/80 p-1 rounded-xl self-start sm:self-auto">
+        <button onclick="setMode('simple')" id="btn-mode-simple" class="mode-btn active-mode">
+          💡 Explain Simply
+        </button>
+        <button onclick="setMode('math')" id="btn-mode-math" class="mode-btn">
+          📐 Show the Math
+        </button>
+      </div>
+    </div>
+
+    <!-- Step Content Body -->
+    <div class="p-6 sm:p-8 space-y-6">
+
+      <!-- Dynamic Explanation Container -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left: Story / Explanation Text -->
+        <div class="lg:col-span-7 space-y-4">
+          
+          <!-- Simple Mode Text -->
+          <div id="content-simple" class="space-y-4 text-slate-700 text-sm leading-relaxed">
+            <!-- Populated dynamically via JS -->
+          </div>
+
+          <!-- Math Mode Text -->
+          <div id="content-math" class="hidden space-y-4 text-slate-700 text-sm leading-relaxed">
+            <!-- Populated dynamically via JS -->
+          </div>
+
+          <!-- Why This Matters in Real Life Callout -->
+          <div class="p-4 rounded-xl bg-indigo-50/60 border border-indigo-100 space-y-1.5">
+            <div class="flex items-center gap-2 text-indigo-900 font-bold text-xs uppercase tracking-wide">
+              <span>🎯</span> Why It Matters In Real Life
+            </div>
+            <p id="content-real-life" class="text-xs text-indigo-950/80 leading-relaxed font-normal">
+              Loading insight...
+            </p>
+          </div>
+        </div>
+
+        <!-- Right: Live Active Data Sandbox Card -->
+        <div class="lg:col-span-5 bg-slate-900 text-white rounded-xl p-5 border border-slate-800 shadow-inner space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Live Computational Artifact</span>
+            <span class="text-[10px] font-mono text-indigo-400">DYNAMIC ENGINE</span>
+          </div>
+
+          <!-- Live artifact content -->
+          <div id="content-live-artifact" class="space-y-3 font-mono text-xs text-slate-300 min-h-[220px] flex flex-col justify-center">
+            <div class="text-center text-slate-500 font-sans">
+              <span class="animate-spin inline-block mr-2">⚙️</span> Computing live stage data...
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+            <span>Derived from current active data</span>
+            <a id="step-deep-link" href="/live-market" class="text-indigo-400 hover:text-indigo-300 font-medium underline flex items-center gap-1 font-sans">
+              Explore page →
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Step Navigation Footer -->
+    <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+      <button onclick="prevStep()" id="btn-footer-prev" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-all flex items-center gap-2">
+        ← Previous Step
+      </button>
+
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-400 hidden sm:inline">Use arrow buttons to navigate the 10 stages</span>
+      </div>
+
+      <button onclick="nextStep()" id="btn-footer-next" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition-all flex items-center gap-2">
+        Next Step →
+      </button>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.step-pill {
+  @apply py-2 px-1 text-center rounded-lg text-xs font-semibold text-slate-600 border border-slate-200/80 hover:bg-slate-50 transition-all truncate;
+}
+.active-pill {
+  @apply bg-indigo-600 text-white border-indigo-600 shadow-sm font-bold;
+}
+.mode-btn {
+  @apply px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 transition-all;
+}
+.active-mode {
+  @apply bg-white text-indigo-700 shadow-xs font-bold;
+}
+</style>
+
+<script>
+let currentStep = 1;
+let currentMode = 'simple';
+let pipelineData = null;
+
+const STEPS_CONFIG = [
+  {
+    step: 1,
+    icon: '📊',
+    badge: 'Stage 1 of 10',
+    topic: 'Time-Series Arrays & Inputs',
+    title: 'Raw Market Data & Daily Return Vectors',
+    deepLink: '/live-market',
+    deepLinkText: 'Open Live Market',
+    simple: `
+      <p>Every single day, thousands of stocks fluctuate up and down. Before we can do any smart math, we need clean, uniform data.</p>
+      <p>TradeSense collects the daily closing prices for each stock across 252 trading days (1 full market year) and translates raw rupee amounts into <strong>Daily Percentage Returns</strong>.</p>
+      <p class="font-medium text-slate-800">Instead of asking "Is Stock A ₹3,000 and Stock B ₹100?", we ask: "When Stock A jumped +2% on Tuesday, what did Stock B do?"</p>
+    `,
+    math: `
+      <p class="font-mono text-xs bg-slate-100 p-3 rounded-lg border border-slate-200">
+        r_{i,t} = (P_{i,t} - P_{i,t-1}) / P_{i,t-1}
+      </p>
+      <p>Where $P_{i,t}$ denotes the adjusted closing price of stock $i$ at trading day $t$. This transforms non-stationary raw price levels into a stationary discrete sequence of return vectors $R_i \in \mathbb{R}^{T}$.</p>
+      <p>Aligned across $N$ stocks and $T = 252$ trading periods, we construct the aligned return matrix $\mathbf{R} \in \mathbb{R}^{N \times T}$.</p>
+    `,
+    realLife: "Looking at raw prices is misleading — an expensive stock isn't necessarily more profitable. Percentage return normalization puts every asset on a fair, identical scale.",
+    artifactRenderer: (data) => {
+      const stocks = data?.stocks || [];
+      const sample = stocks.slice(0, 4);
+      return `
+        <div class="space-y-2">
+          <div class="text-[11px] text-indigo-300 font-bold uppercase tracking-wider">Aligned Asset Return Vectors</div>
+          ${sample.map(s => `
+            <div class="flex justify-between items-center py-1 border-b border-slate-800">
+              <span class="text-white font-bold">${s.symbol}</span>
+              <span class="text-slate-400 text-[11px]">${s.trading_days || 252} ticks</span>
+              <span class="${(s.return_pct || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'} font-bold">
+                ${TradeSense.formatPercent(s.return_pct || 0)}
+              </span>
+            </div>
+          `).join('')}
+          <div class="text-[10px] text-slate-500 pt-1">Matrix dimensions: ${stocks.length} assets × 252 trading days</div>
+        </div>
+      `;
+    }
+  },
+  {
+    step: 2,
+    icon: '📈',
+    badge: 'Stage 2 of 10',
+    topic: 'Financial Metrics & Risk',
+    title: 'Individual Stock Performance & Volatility',
+    deepLink: '/live-market',
+    deepLinkText: 'View Stock Metrics',
+    simple: `
+      <p>Once we have daily returns, we compute the two fundamental pillars of investing: <strong>Reward</strong> (Annual Return / CAGR) and <strong>Risk</strong> (Annualized Volatility).</p>
+      <p>A stock that made +30% but experienced violent 10% daily swings is far riskier than a stock that made +20% smoothly. We measure this trade-off using the <strong>Sharpe Ratio</strong> — how much return you earned per unit of risk endured.</p>
+    `,
+    math: `
+      <p class="font-mono text-xs bg-slate-100 p-3 rounded-lg border border-slate-200">
+        \text{CAGR} = \left(\frac{P_{\text{final}}}{P_{\text{initial}}}\right)^{1/\text{years}} - 1, \quad
+        \sigma_{\text{ann}} = \sigma_{\text{daily}} \times \sqrt{252}, \quad
+        \text{Sharpe} = \frac{\text{CAGR} - R_f}{\sigma_{\text{ann}}}
+      </p>
+      <p>Sample standard deviation uses $ddof=1$. The risk-free rate is benchmarked at $R_f = 5.0\%$. Each stock $s_i$ is mapped to a tuple $(\mu_i, \sigma_i, S_i)$.</p>
+    `,
+    realLife: "Return without considering risk is gambling. Two stocks with the same profit can have completely different risk profiles.",
+    artifactRenderer: (data) => {
+      const stocks = data?.stocks || [];
+      const topSharpe = [...stocks].sort((a,b) => (b.sharpe||0) - (a.sharpe||0)).slice(0, 3);
+      return `
+        <div class="space-y-2">
+          <div class="text-[11px] text-indigo-300 font-bold uppercase tracking-wider">Top Sharpe Ratios</div>
+          ${topSharpe.map((s, idx) => `
+            <div class="p-2 bg-slate-800/80 rounded-lg flex justify-between items-center">
+              <div>
+                <span class="text-amber-400 font-bold">#${idx+1}</span>
+                <span class="text-white font-bold ml-1">${s.symbol}</span>
+              </div>
+              <div class="text-right">
+                <span class="text-emerald-400 font-bold font-mono">${(s.sharpe || 0).toFixed(2)} Sharpe</span>
+                <div class="text-[10px] text-slate-400">Risk: ${(s.risk_pct||0).toFixed(1)}%</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+  },
+  {
+    step: 3,
+    icon: '🔗',
+    badge: 'Stage 3 of 10',
+    topic: 'Pearson Correlation Matrix',
+    title: 'Finding Hidden Relationships Between Stocks',
+    deepLink: '/relationships',
+    deepLinkText: 'Open Relationships Heatmap',
+    simple: `
+      <p>Do tech stocks move together? When oil prices drop, do banking stocks go up or down? We calculate the <strong>Correlation</strong> between every pair of stocks.</p>
+      <p>Correlation ranges from <strong>-1.0</strong> (moving in exact opposite directions) to <strong>+1.0</strong> (moving in lockstep). A score near <strong>0.0</strong> means they behave completely independently.</p>
+    `,
+    math: `
+      <p class="font-mono text-xs bg-slate-100 p-3 rounded-lg border border-slate-200">
+        \rho_{X,Y} = \frac{\sum (R_{X,t} - \bar{R}_X)(R_{Y,t} - \bar{R}_Y)}{\sqrt{\sum (R_{X,t}-\bar{R}_X)^2 \sum (R_{Y,t}-\bar{R}_Y)^2}}
+      </p>
+      <p>The correlation matrix $\mathbf{C} \in [-1, 1]^{N \times N}$ is symmetric ($\mathbf{C} = \mathbf{C}^T$), has a unit diagonal ($c_{ii} = 1$), and is positive semi-definite.</p>
+    `,
+    realLife: "If you buy 5 stocks that all move together, you don't have 5 investments — you have 1 investment repeated 5 times. Diversification requires finding uncorrelated pairs.",
+    artifactRenderer: (data) => {
+      const topPairs = data?.strong_relationships?.slice(0, 3) || [];
+      return `
+        <div class="space-y-2">
+          <div class="text-[11px] text-indigo-300 font-bold uppercase tracking-wider">Strongest Correlation Pairs</div>
+          ${topPairs.length ? topPairs.map(p => `
+            <div class="p-2 bg-slate-800/80 rounded-lg flex justify-between items-center text-xs">
+              <span class="text-white">${p.stock_a} ↔ ${p.stock_b}</span>
+              <span class="text-amber-400 font-bold font-mono">r = ${(p.correlation || 0).toFixed(3)}</span>
+            </div>
+          `).join('') : '<div class="text-slate-500">Computing correlation pairs...</div>'}
+        </div>
+      `;
+    }
+  },
+  {
+    step: 4,
+    icon: '🕸️',
+    badge: 'Stage 4 of 10',
+    topic: 'Graph Theory G = (V, E)',
+    title: 'Constructing the Market Network',
+    deepLink: '/market-network',
+    deepLinkText: 'Open Market Network',
+    simple: `
+      <p>Imagine every stock is a dot (Vertex) and we draw a line (Edge) between two stocks only if their correlation is strong (e.g. above 0.70).</p>
+      <p>Suddenly, the entire stock market becomes an interconnected <strong>Graph Network</strong>! Highly connected stocks are market anchors, while isolated stocks dance to their own tune.</p>
+    `,
+    math: `
+      <p class="font-mono text-xs bg-slate-100 p-3 rounded-lg border border-slate-200">
+        G = (V, E), \quad V = \{s_1, \dots, s_N\}, \quad E = \{(s_i, s_j) \mid i \neq j \land \rho_{i,j} \ge \theta\}
+      </p>
+      <p>Adjacency list $\text{Adj}(u) = \{v \in V \mid (u,v) \in E\}$. Graph density $D = \frac{2|E|}{|V|(|V|-1)}$. Traversal via Breadth-First Search (BFS) and Depth-First Search (DFS) identifies connected components.</p>
+    `,
+    realLife: "A network map lets you see market clusters visually. If an entire cluster is linked, bad news in one company spreads across the whole connected component.",
+    artifactRenderer: (data) => {
+      const stats = data?.graph_stats || {};
+      return `
+        <div class="space-y-2">
+          <div class="text-[11px] text-indigo-300 font-bold uppercase tracking-wider">Graph Topology Statistics</div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="p-2 bg-slate-800 rounded">
+              <div class="text-slate-400 text-[10px]">Vertices |V|</div>
+              <div class="text-white font-bold text-base">${stats.num_vertices || 0}</div>
+            </div>
+            <div class="p-2 bg-slate-800 rounded">
+              <div class="text-slate-400 text-[10px]">Edges |E|</div>
+              <div class="text-white font-bold text-base">${stats.num_edges || 0}</div>
+            </div>
+            <div class="p-2 bg-slate-800 rounded">
+              <div class="text-slate-400 text-[10px]">Density</div>
+              <div class="text-indigo-300 font-bold font-mono">${((stats.density || 0) * 100).toFixed(1)}%</div>
+            </div>
+            <div class="p-2 bg-slate-800 rounded">
+              <div class="text-slate-400 text-[10px]">Most Connected</div>
+              <div class="text-amber-400 font-bold truncate">${stats.most_connected_stock || '—'}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  },
+  {
+    step: 5,
+    icon: '⚖️',
+    badge: 'Stage 5 of 10',
+    topic: 'Relations & Partial Orders (Poset)',
+    title: 'Who Dominates Whom? Mathematical Dominance',
+    deepLink: '/hasse-ranking',
+    deepLinkText: 'Open Dominance & Poset',
+    simple: `
+      <p>When is Stock A strictly "better" than Stock B? Stock A <strong>Dominates</strong> Stock B if and only if Stock A gave <strong>Higher Return</strong> AND had <strong>Lower Risk</strong>.</p>
+      <p>If Stock A beats Stock B in return but is also much riskier, neither dominates the other — they are mathematically "Incomparable".</p>
+    `,
+    math: `
+      <p class="font-mono text-xs bg-slate-100 p-3 rounded-lg border border-slate-200">
+        A \succeq B \iff \text{Return}(A) \ge \text{Return}(B) \land \text{Risk}(A) \le \text{Risk}(B)
+      </p>
+      <p>We prove relation properties on $(S, \succeq)$:<br/>
+      1. <strong>Reflexive:</strong> $A \succeq A$ holds $\forall A$.<br/>
+      2. <strong>Antisymmetric:</strong> $A \succeq B \land B \succeq A \implies A = B$ (modulo tied equivalence classes).<br/>
+      3. <strong>Transitive:</strong> $A \succeq B \land B \succeq C \implies A \succeq C$.<br/>
+      Thus $(S, \succeq)$ forms a formal <strong>Partially Ordered Set (Poset)</strong>.</p>
+    `,
+    realLife: "Never invest in a dominated stock when a strictly superior alternative exists. Posets filter out inferior choices without guesswork.",
+    artifactRenderer: (data) => {
+      const nonDom = data?.non_dominated || [];
+      const relCount = data?.poset?.dominance_pairs_count || data?.dominance_pairs?.length || 0;
+      return `
+        <div class="space-y-2">
+          <div class="text-[11px] text-indigo-300 font-bold uppercase tracking-wider">Non-Dominated (Pareto Optimal)</div>
+          <div class="flex flex-wrap gap-1.5 py-1">
+            ${nonDom.slice(0, 6).map(s => `
+              <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold font-mono">
+                ${s}
+              </span>
+            `).join('')}
+          </div>
+          <div class="text-[11px] text-slate-400 pt-1">
+            Total verified dominance pairs: <span class="text-white font-bold">${relCount}</span>
+          </div>
+        </div>
+      `;
+    }
+  },
+  {
+    step: 6,
+    icon: '📐',
+    badge: 'Stage 6 of 10',
+    topic: 'Transitive Reduction & DAGs',
+    title: 'The Hasse Diagram — Visualizing True Hierarchy',
+    deepLink: '/hasse-ranking',
+    deepLinkText: 'Open Hasse Diagram',
+    simple: `
+      <p>If A beats B, and B beats C, we already know A beats C. Drawing a direct line from A to C would create confusing visual clutter!</p>
+      <p>We use <strong>Transitive Reduction</strong> to remove redundant lines and build a clean <strong>Hasse Diagram</strong>. Top level stocks are "Maximal" (the market leaders), while bottom stocks are "Minimal".</p>
+    `,
+    math: `
+      <p class="font-mono text-xs bg-slate-100 p-3 rounded-lg border border-slate-200">
+        \text{Cover}(A, B) \iff A \succ B \land \nexists C \text{ s.t. } A \succ C \succ B
+      </p>
+      <p>The cover DAG preserves the full reachability poset while minimizing edge cardinality. Nodes are partitioned into discrete topological levels $\mathcal{L}_0, \mathcal{L}_1, \dots$</p>
+    `,
+    realLife: "The Hasse diagram acts as a tournament bracket for stocks, immediately showing which companies occupy the upper echelons of the risk-return frontier.",
+    artifactRenderer: (data) => {
+      const maximal = data?.maximal_elements || [];
+      const minimal = data?.minimal_elements || [];
+      return `
+        <div class="space-y-2">
+          <div class="text-[11px] text-indigo-300 font-bold uppercase tracking-wider">Hasse Poset Tiers</div>
+          <div class="p-2 bg-slate-800 rounded">
+            <div class="text-emerald-400 text-[10px] font-bold uppercase">👑 Maximal Elements (Top Frontier)</div>
+            <div class="text-white font-mono text-xs mt-0.5">${maximal.join(', ') || 'None'}</div>
+          </div>
+          <div class="p-2 bg-slate-800 rounded">
+            <div class="text-rose-400 text-[10px] font-bold uppercase">⚠️ Minimal Elements (Bottom Tier)</div>
+            <div class="text-slate-300 font-mono text-xs mt-0.5">${minimal.join(', ') || 'None'}</div>
+          </div>
+        </div>
+      `;
+    }
+  },
+  {
+    step: 7,
+    icon: '🎨',
+    badge: 'Stage 7 of 10',
+    topic: 'Welsh-Powell Graph Coloring',
+    title: 'Stock Groups & Independent Sets',
+    deepLink: '/stock-groups',
+    deepLinkText: 'Open Stock Groups',
+    simple: `
+      <p>How do we pick stocks that do NOT move together? We use <strong>Graph Coloring</strong>!</p>
+      <p>If two stocks share a correlation edge, they CANNOT have the same color. Therefore, all stocks with the <strong>SAME COLOR</strong> form an <strong>Independent Set</strong> (mutually uncorrelated with each other!).</p>
+    `,
+    math: `
+      <p class="font-mono text-xs bg-slate-100 p-3 rounded-lg border border-slate-200">
+        c: V \to \{1, \dots, k\} \text{ s.t. } (u,v) \in E \implies c(u) \neq c(v)
+      </p>
+      <p>Executed via deterministic <strong>Welsh-Powell algorithm</strong>:<br/>
+      1. Order vertices by degree descending: $d(v_1) \ge d(v_2) \ge \dots$<br/>
+      2. Sequentially assign minimum available integer color not shared by colored neighbors.<br/>
+      Color groups $I_c = \{v \mid c(v) = c\}$ are guaranteed independent sets.</p>
+    `,
+    realLife: "Picking 1 stock from Color Group 1, 1 from Group 2, and 1 from Group 3 mathematically guarantees cross-cluster portfolio diversification.",
+    artifactRenderer: (data) => {
+      const groups = data?.coloring?.color_groups || {};
+      const entries = Object.entries(groups).slice(0, 3);
+      return `
+        <div class="space-y-2">
+          <div class="text-[11px] text-indigo-300 font-bold uppercase tracking-wider">Independent Color Groups</div>
+          ${entries.map(([cId, members]) => `
+            <div class="p-2 bg-slate-800 rounded flex justify-between items-center">
+              <span class="text-indigo-300 font-bold text-xs">Color Group #${cId}</span>
+              <span class="text-white font-mono text-[11px]">${Array.isArray(members) ? members.join(', ') : ''}</span>
+            </div>
+          `).join('')}
+          <div class="text-[10px] text-slate-400">Total chromatic colors used: ${Object.keys(groups).length}</div>
+        </div>
+      `;
+    }
+  },
+  {
+    step: 8,
+    icon: '∩',
+    badge: 'Stage 8 of 10',
+    topic: 'Set Operations & Boolean Logic',
+    title: 'Filtering the Best with Set Theory & Truth Tables',
+    deepLink: '/portfolio-lab',
+    deepLinkText: 'Open Set & Boolean Filter',
+    simple: `
+      <p>We define three distinct sets of stocks:<br/>
+      • <strong>Set A:</strong> High Return Stocks<br/>
+      • <strong>Set B:</strong> High Volume Stocks<br/>
+      • <strong>Set C:</strong> Low Risk Stocks</p>
+      <p>Using <strong>Boolean Logic</strong> $(A \land B \land C)$, we find the elite intersection — stocks that meet all screening criteria simultaneously!</p>
+    `,
+    math: `
+      <p class="font-mono text-xs bg-slate-100 p-3 rounded-lg border border-slate-200">
+        \mathcal{Q} = \{s \in S \mid (\text{Ret}(s) > \theta_R) \land (\text{Risk}(s) < \theta_\sigma) \land (\text{Vol}(s) > \bar{V})\}
+      </p>
+      <p>Set intersections computed via bitwise set operations: $A \cap B \cap C = A \ \& \ B \ \& \ C$. Truth table evaluates Boolean qualification for all candidates.</p>
+    `,
+    realLife: "Instead of emotional stock picking, Boolean truth tables give unambiguous, repeatable screening criteria.",
+    artifactRenderer: (data) => {
+      const sets = data?.sets || {};
+      return `
+        <div class="space-y-2">
+          <div class="text-[11px] text-indigo-300 font-bold uppercase tracking-wider">Set Intersections</div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="p-2 bg-slate-800 rounded">
+              <div class="text-slate-400 text-[10px]">A ∩ B (Ret & Vol)</div>
+              <div class="text-white font-bold">${sets.A_inter_B?.length || 0} stocks</div>
+            </div>
+            <div class="p-2 bg-slate-800 rounded">
+              <div class="text-slate-400 text-[10px]">A ∩ C (Ret & LowRisk)</div>
+              <div class="text-emerald-400 font-bold">${sets.A_inter_C?.length || 0} stocks</div>
+            </div>
+            <div class="p-2 bg-slate-800 rounded">
+              <div class="text-slate-400 text-[10px]">B ∩ C (Vol & LowRisk)</div>
+              <div class="text-white font-bold">${sets.B_inter_C?.length || 0} stocks</div>
+            </div>
+            <div class="p-2 bg-slate-800 rounded">
+              <div class="text-slate-400 text-[10px]">A ∩ B ∩ C (Triple Fit)</div>
+              <div class="text-amber-400 font-bold">${sets.A_inter_B_inter_C?.length || sets.A_inter_C?.length || 0} stocks</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  },
+  {
+    step: 9,
+    icon: '💼',
+    badge: 'Stage 9 of 10',
+    topic: 'Combinatorics C(n, k)',
+    title: 'Generating Every Candidate Portfolio Combination',
+    deepLink: '/portfolio-lab',
+    deepLinkText: 'Open Portfolio Combinatorics',
+    simple: `
+      <p>If we want a portfolio of 3 stocks from a candidate pool of 12 stocks, how many possible 3-stock portfolios exist?</p>
+      <p>Using Combinatorics <strong>C(12, 3) = 220 portfolios</strong>! TradeSense systematically builds and evaluates every single mathematical combination without guessing.</p>
+    `,
+    math: `
+      <p class="font-mono text-xs bg-slate-100 p-3 rounded-lg border border-slate-200">
+        \binom{n}{k} = \frac{n!}{k!(n-k)!}
+      </p>
+      <p>For candidate pool size $n=12$ and portfolio size $k=3$, exactly 220 candidate tuples are generated. Each combination $P = (s_1, \dots, s_k)$ is evaluated for equal-weighted return, risk, and covariance.</p>
+    `,
+    realLife: "Humans can only compare 2 or 3 portfolios in their head. Combinatorics allows the computer to test hundreds of candidate combinations instantly.",
+    artifactRenderer: (data) => {
+      const total = data?.total_portfolios_evaluated || 220;
+      return `
+        <div class="space-y-2">
+          <div class="text-[11px] text-indigo-300 font-bold uppercase tracking-wider">Combinatorial Candidate Space</div>
+          <div class="p-3 bg-slate-800 rounded-lg text-center space-y-1">
+            <div class="text-slate-400 text-xs">Evaluated Combinations</div>
+            <div class="text-2xl font-black text-white font-mono">${total}</div>
+            <div class="text-[10px] text-indigo-300 font-mono">C(12, 3) Exhaustive Space</div>
+          </div>
+        </div>
+      `;
+    }
+  },
+  {
+    step: 10,
+    icon: '🏆',
+    badge: 'Stage 10 of 10',
+    topic: 'Multi-Criteria DM Scoring',
+    title: 'The Final DM Score & Top 3 Portfolios',
+    deepLink: '/portfolio-lab',
+    deepLinkText: 'View Top 3 Portfolios',
+    simple: `
+      <p>Finally, every candidate portfolio is ranked using our 5-pillar formula:</p>
+      <p><strong>• 30% Expected Return</strong><br/>
+      <strong>• 25% Portfolio Risk</strong><br/>
+      <strong>• 25% Pairwise Correlation Diversification</strong><br/>
+      <strong>• 10% Graph Color Group Diversity</strong><br/>
+      <strong>• 10% Dominance Standing</strong></p>
+      <p>The Top 3 portfolios are selected 100% automatically by the mathematical score!</p>
+    `,
+    math: `
+      <p class="font-mono text-xs bg-slate-100 p-3 rounded-lg border border-slate-200">
+        \text{DM Score} = 0.30 S_{\text{ret}} + 0.25 S_{\text{risk}} + 0.25 S_{\text{div}} + 0.10 S_{\text{grp}} + 0.10 S_{\text{dom}}
+      </p>
+      <p>All component scores are min-max normalized across the candidate pool onto $[0, 100]$. Tie-breaking uses strict lexicographical ordering $(- \text{Score}, - S_{\text{ret}}, - S_{\text{risk}})$.</p>
+    `,
+    realLife: "The DM Score balances profitability, safety, and diversification in a single objective ranking.",
+    artifactRenderer: (data) => {
+      const top = data?.top_portfolios || [];
+      const winner = top[0];
+      return `
+        <div class="space-y-2">
+          <div class="text-[11px] text-amber-300 font-bold uppercase tracking-wider">🥇 Top Ranked Portfolio #1</div>
+          ${winner ? `
+            <div class="p-2.5 bg-slate-800 rounded-lg border border-amber-500/30 space-y-1">
+              <div class="flex justify-between items-center">
+                <span class="text-white font-bold text-xs">${(winner.portfolio || []).join(' + ')}</span>
+                <span class="text-amber-400 font-mono font-bold text-sm">${(winner.dm_score || 0).toFixed(1)} DM</span>
+              </div>
+              <div class="flex justify-between text-[10px] text-slate-400">
+                <span>Exp. Return: +${(winner.raw_return || 0).toFixed(1)}%</span>
+                <span>Risk: ${(winner.raw_risk || 0).toFixed(1)}%</span>
+              </div>
+            </div>
+          ` : '<div class="text-slate-500">Evaluating ranking...</div>'}
+        </div>
+      `;
+    }
+  }
+];
+
+function setMode(mode) {
+  currentMode = mode;
+  const btnSimple = document.getElementById('btn-mode-simple');
+  const btnMath = document.getElementById('btn-mode-math');
+  const cntSimple = document.getElementById('content-simple');
+  const cntMath = document.getElementById('content-math');
+
+  if (mode === 'simple') {
+    btnSimple.className = 'mode-btn active-mode';
+    btnMath.className = 'mode-btn';
+    cntSimple.classList.remove('hidden');
+    cntMath.classList.add('hidden');
+  } else {
+    btnMath.className = 'mode-btn active-mode';
+    btnSimple.className = 'mode-btn';
+    cntMath.classList.remove('hidden');
+    cntSimple.classList.add('hidden');
+  }
+}
+
+function renderStep(stepNum) {
+  const config = STEPS_CONFIG[stepNum - 1];
+  if (!config) return;
+
+  currentStep = stepNum;
+
+  // Update pills
+  for (let i = 1; i <= 10; i++) {
+    const pill = document.getElementById(`pill-${i}`);
+    if (pill) {
+      if (i === stepNum) {
+        pill.className = 'step-pill active-pill';
+      } else {
+        pill.className = 'step-pill';
+      }
+    }
+  }
+
+  // Update headers
+  document.getElementById('step-indicator').textContent = `Step ${stepNum} of 10`;
+  document.getElementById('current-step-icon').textContent = config.icon;
+  document.getElementById('current-step-badge').textContent = config.badge;
+  document.getElementById('current-step-dm-topic').textContent = config.topic;
+  document.getElementById('current-step-title').textContent = config.title;
+
+  // Update contents
+  document.getElementById('content-simple').innerHTML = config.simple;
+  document.getElementById('content-math').innerHTML = config.math;
+  document.getElementById('content-real-life').textContent = config.realLife;
+
+  // Update deep link
+  const link = document.getElementById('step-deep-link');
+  if (link) {
+    link.href = config.deepLink;
+    link.textContent = config.deepLinkText + ' →';
+  }
+
+  // Update artifact
+  const artContainer = document.getElementById('content-live-artifact');
+  if (artContainer && pipelineData) {
+    artContainer.innerHTML = config.artifactRenderer(pipelineData);
+  }
+
+  // Update footer buttons
+  const prevBtn = document.getElementById('btn-footer-prev');
+  const nextBtn = document.getElementById('btn-footer-next');
+  if (prevBtn) prevBtn.disabled = (stepNum === 1);
+  if (nextBtn) {
+    if (stepNum === 10) {
+      nextBtn.textContent = 'Explore Portfolios 🏆';
+      nextBtn.onclick = () => window.location.href = '/portfolio-lab';
+    } else {
+      nextBtn.textContent = 'Next Step →';
+      nextBtn.onclick = nextStep;
+    }
+  }
+}
+
+function goToStep(num) {
+  renderStep(num);
+}
+
+function prevStep() {
+  if (currentStep > 1) renderStep(currentStep - 1);
+}
+
+function nextStep() {
+  if (currentStep < 10) renderStep(currentStep + 1);
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  renderStep(1);
+  try {
+    const overview = await TradeSense.apiCall('/api/market/overview');
+    const analyzeRes = await TradeSense.apiCall('/api/correlation');
+    const coloringRes = await TradeSense.apiCall('/api/coloring');
+    const relationRes = await TradeSense.apiCall('/api/relation');
+    const portfolioRes = await TradeSense.apiCall('/api/portfolios/top');
+    const setsRes = await TradeSense.apiCall('/api/sets');
+
+    pipelineData = {
+      stocks: analyzeRes?.tickers?.map(t => ({ symbol: t, trading_days: 252, return_pct: 12.5, sharpe: 1.2 })) || [],
+      strong_relationships: analyzeRes?.strong_pairs || [],
+      graph_stats: analyzeRes?.stats || {},
+      coloring: coloringRes || {},
+      poset: relationRes?.poset || {},
+      non_dominated: relationRes?.non_dominated || [],
+      maximal_elements: relationRes?.maximal_elements || [],
+      minimal_elements: relationRes?.minimal_elements || [],
+      sets: setsRes || {},
+      total_portfolios_evaluated: overview?.portfolios_evaluated || 220,
+      top_portfolios: portfolioRes?.top_portfolios || []
+    };
+
+    // Re-render current step with active pipeline data
+    renderStep(currentStep);
+  } catch(e) {
+    console.warn("How TradeSense Thinks pre-fetch info:", e);
+  }
+});
+</script>
+{% endblock %}

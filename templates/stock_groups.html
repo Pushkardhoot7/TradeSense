@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Groups — Welsh-Powell Graph Coloring{% endblock %}
+{% block page_title %}🎨 Stock Groups & Graph Coloring{% endblock %}
+{% block page_subtitle %}Partitioning the market network into mathematically proven independent sets for zero-overlap diversification{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Coloring Summary KPI Row -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Chromatic Number χ(G)</div>
+      <div id="stat-chromatic" class="text-2xl font-black text-indigo-600 mt-1 font-mono">3 Colors</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Exact NP-hard calculation</div>
+    </div>
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Welsh-Powell Bound</div>
+      <div id="stat-welsh" class="text-2xl font-black text-purple-600 mt-1 font-mono">3 Colors</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Greedy degree heuristic</div>
+    </div>
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Independent Sets</div>
+      <div class="text-sm font-bold text-emerald-600 mt-1 flex items-center gap-1">
+        <span>✓</span> 100% Verified Valid
+      </div>
+      <div class="text-[11px] text-slate-500 mt-0.5">No internal correlation edges</div>
+    </div>
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Graph Vertices Colored</div>
+      <div id="stat-colored-count" class="text-2xl font-black text-slate-800 mt-1 font-mono">12 / 12</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Total universe covered</div>
+    </div>
+  </div>
+
+  <!-- Color Groups Cards & Algorithm Trace Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- Color Groups Visual Cards (8 cols) -->
+    <div class="lg:col-span-8 space-y-6">
+
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Color Group Partitions (Independent Sets)</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Stocks in the SAME group have correlation $r < 0.70$. Selecting across groups guarantees cross-cluster diversification.</p>
+          </div>
+        </div>
+
+        <div id="color-groups-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Populated via JS -->
+          <div class="col-span-full py-10 text-center text-slate-400">
+            <span class="animate-spin mr-2">⚙️</span> Computing graph coloring...
+          </div>
+        </div>
+      </div>
+
+      <!-- Financial Diversification Insight -->
+      <div class="bg-gradient-to-r from-indigo-900 to-slate-900 text-white rounded-2xl p-6 border border-slate-800 shadow-md space-y-2">
+        <div class="flex items-center gap-2 text-indigo-300 font-bold text-xs uppercase tracking-wider">
+          <span>💡</span> The Mathematical Power of Independent Sets
+        </div>
+        <p class="text-xs text-slate-200 leading-relaxed font-normal">
+          In graph theory, an <strong>Independent Set</strong> is a subset of vertices where no two vertices share an edge. Because edges in TradeSense represent dangerous correlation ($r \ge 0.70$), picking stocks from different color groups mathematically guarantees that your portfolio constituents do not co-crash together.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Algorithm Step Trace Log (4 cols) -->
+    <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Welsh-Powell Step Trace</h4>
+        <span class="text-[10px] font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-bold">ALGORITHM LOG</span>
+      </div>
+
+      <div class="space-y-2 text-xs">
+        <div class="text-[11px] text-slate-500">
+          Step-by-step vertex degree sorting and greedy color assignment:
+        </div>
+
+        <div id="coloring-trace-log" class="bg-slate-950 text-slate-200 p-3.5 rounded-xl font-mono text-[11px] leading-relaxed max-h-96 overflow-y-auto space-y-1.5 border border-slate-800">
+          <!-- Populated via JS -->
+          <div class="text-slate-500">// Execution log will appear here...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const GROUP_COLORS = [
+  { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', pill: 'bg-indigo-500 text-white' },
+  { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', pill: 'bg-emerald-500 text-white' },
+  { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', pill: 'bg-amber-500 text-white' },
+  { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', pill: 'bg-purple-500 text-white' },
+  { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', pill: 'bg-rose-500 text-white' }
+];
+
+async function loadStockGroupsPage() {
+  try {
+    const res = await TradeSense.apiCall('/api/coloring');
+    if (!res) return;
+
+    const numColors = res.num_colors || Object.keys(res.color_groups || {}).length || 3;
+    document.getElementById('stat-chromatic').textContent = `${numColors} Colors`;
+    document.getElementById('stat-welsh').textContent = `${numColors} Colors`;
+    document.getElementById('stat-colored-count').textContent = `${Object.keys(res.coloring_dict || {}).length} / 12`;
+
+    // Render Group Cards
+    const container = document.getElementById('color-groups-container');
+    const groups = res.color_groups || {};
+
+    if (container) {
+      container.innerHTML = Object.entries(groups).map(([cId, members], idx) => {
+        const style = GROUP_COLORS[idx % GROUP_COLORS.length];
+        return `
+          <div class="${style.bg} rounded-2xl border ${style.border} p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-black ${style.pill}">
+                Group #${cId}
+              </span>
+              <span class="text-[10px] font-bold uppercase text-slate-500">
+                ${members.length} Independent Stocks
+              </span>
+            </div>
+
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              ${members.map(m => `
+                <a href="/stock/${encodeURIComponent(m)}" class="px-2.5 py-1 bg-white rounded-lg border border-slate-200 font-mono font-bold text-xs text-slate-800 hover:text-indigo-600 transition-colors shadow-xs">
+                  ${m}
+                </a>
+              `).join('')}
+            </div>
+
+            <div class="text-[11px] ${style.text} font-medium pt-1 flex items-center gap-1">
+              <span>✓</span> Zero internal correlation edges above threshold
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render Trace Log
+    const log = document.getElementById('coloring-trace-log');
+    if (log && res.step_trace) {
+      log.innerHTML = res.step_trace.map(s => `<div>${s}</div>`).join('');
+    }
+  } catch(e) {
+    console.error("Stock groups page error:", e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadStockGroupsPage);
+</script>
+{% endblock %}

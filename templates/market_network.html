@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Market Network — Graph Theory G=(V,E){% endblock %}
+{% block page_title %}🕸️ Market Network & Graph Theory{% endblock %}
+{% block page_subtitle %}Visualizing market topology, connected components, and breadth/depth-first search traversals{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Interactive Threshold & Graph Controls Bar -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4 flex-wrap">
+      <div>
+        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+          Correlation Threshold (<span id="threshold-val" class="text-indigo-600 font-mono font-bold">0.70</span>)
+        </label>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-slate-400 font-mono">0.50</span>
+          <input type="range" id="threshold-slider" min="0.50" max="0.90" step="0.05" value="0.70" oninput="onThresholdChange(this.value)" class="w-48 sm:w-64 accent-indigo-600 cursor-pointer"/>
+          <span class="text-xs text-slate-400 font-mono">0.90</span>
+        </div>
+      </div>
+
+      <div class="h-8 w-px bg-slate-200 hidden sm:block"></div>
+
+      <!-- Graph Quick Stats -->
+      <div class="flex items-center gap-3 text-xs">
+        <div class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
+          <span class="text-slate-400 font-medium">Vertices |V|:</span>
+          <span id="graph-v" class="font-bold text-slate-800 ml-1">12</span>
+        </div>
+        <div class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
+          <span class="text-slate-400 font-medium">Edges |E|:</span>
+          <span id="graph-e" class="font-bold text-indigo-600 ml-1">8</span>
+        </div>
+        <div class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
+          <span class="text-slate-400 font-medium">Density:</span>
+          <span id="graph-density" class="font-bold text-purple-600 ml-1 font-mono">12.1%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Centrality / Most Connected Badge -->
+    <div class="p-2.5 rounded-xl bg-indigo-50/60 border border-indigo-100 flex items-center gap-2 text-xs">
+      <span class="text-indigo-600 font-bold">👑 Central Hub:</span>
+      <span id="graph-hub" class="font-bold text-indigo-950 font-mono">TCS.NS</span>
+    </div>
+  </div>
+
+  <!-- Network Chart & Algorithm Tracer Layout -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- Graph Visualization (8 cols) -->
+    <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Market Network Graph G = (V, E)</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Lines represent co-movement correlations $r \ge \theta$. Move the threshold slider to see links form dynamically.</p>
+        </div>
+      </div>
+
+      <!-- Plotly Network Graph Container -->
+      <div id="market-network-plot" class="w-full h-[540px] rounded-xl overflow-hidden">
+        <div class="flex items-center justify-center h-full text-slate-400 text-xs">
+          <span class="animate-spin mr-2">⚙️</span> Rendering Market Network...
+        </div>
+      </div>
+    </div>
+
+    <!-- Algorithm Steps: BFS & DFS (4 cols) -->
+    <div class="lg:col-span-4 space-y-6">
+
+      <!-- BFS & DFS Interactive Panel -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Traversal Tracer</h4>
+          <span class="text-[10px] text-slate-400 font-mono">BFS / DFS FROM SCRATCH</span>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Start Node Picker -->
+          <div>
+            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Select Origin Node</label>
+            <select id="traversal-start-node" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 outline-none">
+              <!-- Populated via JS -->
+            </select>
+          </div>
+
+          <!-- Algorithm Tabs -->
+          <div class="flex gap-2">
+            <button onclick="runTraversal('BFS')" id="btn-tab-bfs" class="flex-1 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs">
+              Breadth-First (BFS)
+            </button>
+            <button onclick="runTraversal('DFS')" id="btn-tab-dfs" class="flex-1 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold text-xs hover:bg-slate-200">
+              Depth-First (DFS)
+            </button>
+          </div>
+
+          <!-- Trace Output Log -->
+          <div class="bg-slate-950 text-slate-200 p-3.5 rounded-xl font-mono text-[11px] leading-relaxed max-h-60 overflow-y-auto space-y-1.5 border border-slate-800" id="traversal-trace-log">
+            <div class="text-slate-500">// Traversal trace will appear here...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connected Components Card -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Connected Components</h4>
+          <span id="component-count-badge" class="text-[10px] font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded">3 Components</span>
+        </div>
+        <div id="components-list" class="space-y-2 text-xs">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentGraphData = null;
+
+async function loadNetworkPage(threshold = 0.70) {
+  try {
+    const res = await TradeSense.apiCall(`/api/graph?threshold=${threshold}`);
+    currentGraphData = res;
+
+    // Update stats
+    const stats = res?.stats || {};
+    document.getElementById('graph-v').textContent = stats.num_vertices || 12;
+    document.getElementById('graph-e').textContent = stats.num_edges || 0;
+    document.getElementById('graph-density').textContent = ((stats.density || 0) * 100).toFixed(1) + '%';
+    document.getElementById('graph-hub').textContent = stats.most_connected_stock || '—';
+
+    // Populate start node selector if empty
+    const nodeSelect = document.getElementById('traversal-start-node');
+    if (nodeSelect && nodeSelect.options.length === 0) {
+      const tickers = res.tickers || Object.keys(res.adjacency || {});
+      nodeSelect.innerHTML = tickers.map(t => `<option value="${t}">${t}</option>`).join('');
+    }
+
+    // Render Plotly Network
+    TradeSense.renderNetworkGraph('market-network-plot', res);
+
+    // Initial BFS trace
+    runTraversal('BFS');
+
+    // Render components
+    renderComponents(res.connected_components || []);
+  } catch(e) {
+    console.error("Network page error:", e);
+  }
+}
+
+function onThresholdChange(val) {
+  document.getElementById('threshold-val').textContent = parseFloat(val).toFixed(2);
+  loadNetworkPage(parseFloat(val));
+}
+
+function runTraversal(type) {
+  const startNode = document.getElementById('traversal-start-node')?.value || 'TCS.NS';
+  const log = document.getElementById('traversal-trace-log');
+  const btnBfs = document.getElementById('btn-tab-bfs');
+  const btnDfs = document.getElementById('btn-tab-dfs');
+
+  if (type === 'BFS') {
+    btnBfs.className = 'flex-1 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs';
+    btnDfs.className = 'flex-1 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold text-xs hover:bg-slate-200';
+  } else {
+    btnDfs.className = 'flex-1 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs';
+    btnBfs.className = 'flex-1 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold text-xs hover:bg-slate-200';
+  }
+
+  const trace = type === 'BFS' ? currentGraphData?.bfs_trace : currentGraphData?.dfs_trace;
+  const order = type === 'BFS' ? currentGraphData?.bfs_order : currentGraphData?.dfs_order;
+
+  if (log) {
+    log.innerHTML = `
+      <div class="text-indigo-400 font-bold">▶ Running ${type} from [${startNode}]</div>
+      <div class="text-emerald-400 mt-1">Order: ${Array.isArray(order) ? order.join(' → ') : 'Completed'}</div>
+      <div class="border-t border-slate-800 pt-1.5 text-slate-400 space-y-1">
+        ${(trace || ['Traversal completed across graph component.']).map(s => `<div>${s}</div>`).join('')}
+      </div>
+    `;
+  }
+}
+
+function renderComponents(components) {
+  const container = document.getElementById('components-list');
+  const badge = document.getElementById('component-count-badge');
+  if (badge) badge.textContent = `${components.length} Clusters`;
+
+  if (container) {
+    container.innerHTML = components.map((c, idx) => `
+      <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+        <div class="font-bold text-indigo-600 text-[11px]">Cluster #${idx + 1} (${c.length} Assets)</div>
+        <div class="text-slate-700 font-mono text-[11px] mt-0.5">${c.join(', ')}</div>
+      </div>
+    `).join('');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => loadNetworkPage(0.70));
+</script>
+{% endblock %}

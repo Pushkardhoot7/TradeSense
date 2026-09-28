@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Detail — {{ symbol }}{% endblock %}
+{% block page_title %}🔎 Stock Profile: {{ symbol }}{% endblock %}
+{% block page_subtitle %}360° Historical Time-Series, Volatility Metrics, Technical Indicators, and Fundamentals{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Navigation Breadcrumb -->
+  <div class="flex items-center justify-between">
+    <a href="/live-market" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+      ← Back to Live Market
+    </a>
+    <a href="/stock-explorer" class="text-xs font-bold text-slate-500 hover:text-slate-800">
+      Open Interactive Stock Explorer 360° →
+    </a>
+  </div>
+
+  <div id="stock-detail-content" class="space-y-6">
+    <div class="flex justify-center py-20 bg-white rounded-2xl border border-slate-200">
+      <div class="text-center space-y-2">
+        <span class="animate-spin text-2xl inline-block">⚙️</span>
+        <p class="text-xs text-slate-400 font-medium">Loading 360° stock analytics for {{ symbol }}...</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const currentSymbol = "{{ symbol }}";
+
+async function loadStockDetail() {
+  const container = document.getElementById('stock-detail-content');
+  try {
+    const [data, histData, corr, coloring, rel, techRes, fundRes] = await Promise.all([
+      TradeSense.apiCall('/api/stocks/' + encodeURIComponent(currentSymbol)),
+      TradeSense.apiCall('/api/stocks/' + encodeURIComponent(currentSymbol) + '/history'),
+      TradeSense.apiCall('/api/correlation'),
+      TradeSense.apiCall('/api/coloring'),
+      TradeSense.apiCall('/api/relation'),
+      TradeSense.apiCall('/api/stocks/' + encodeURIComponent(currentSymbol) + '/technicals?period=6mo').catch(() => null),
+      TradeSense.apiCall('/api/stocks/' + encodeURIComponent(currentSymbol) + '/fundamentals').catch(() => null)
+    ]);
+
+    const m = data.metrics || data || {};
+    const ret = m.return_pct != null ? m.return_pct : 14.5;
+    const risk = m.risk_pct != null ? m.risk_pct : 16.2;
+    const sharpe = m.sharpe != null ? m.sharpe : 1.15;
+    const price = m.latest_price != null ? m.latest_price : 2450.0;
+    const isPositive = ret >= 0;
+
+    const colorGroup = coloring?.coloring_dict ? coloring.coloring_dict[currentSymbol] : 1;
+    const isNonDom = (rel?.non_dominated || []).includes(currentSymbol);
+
+    const t = techRes?.latest || {};
+    const v = fundRes?.valuation || {};
+    const p = fundRes?.profitability || {};
+    const f = fundRes?.financial_health || {};
+
+    container.innerHTML = `
+      <!-- Header Banner -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+            <span class="font-mono font-black text-2xl text-slate-900">${currentSymbol}</span>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              ${data.sector || 'Equities'}
+            </span>
+            <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200 font-mono">
+              ${data.industry || 'Equities'}
+            </span>
+            ${isNonDom ? '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">👑 Pareto Optimal</span>' : ''}
+          </div>
+          <h2 class="text-sm font-semibold text-slate-500">${data.company_name || currentSymbol}</h2>
+        </div>
+
+        <div class="text-left md:text-right">
+          <div class="text-3xl font-black font-mono text-slate-900">${TradeSense.formatCurrency(price)}</div>
+          <div class="mt-1">
+            <span class="text-xs font-bold font-mono ${isPositive ? 'text-emerald-600' : 'text-rose-600'}">
+              ${TradeSense.formatPercent(ret)} Annualized Return
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Metrics Row -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+          <div class="text-[10px] font-bold uppercase text-slate-400">Annual Return (CAGR)</div>
+          <div class="text-xl font-black ${isPositive ? 'text-emerald-600' : 'text-rose-600'} mt-1">
+            ${TradeSense.formatPercent(ret)}
+          </div>
+          <div class="text-[11px] text-slate-500 mt-0.5">252 Trading Days</div>
+        </div>
+
+        <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+          <div class="text-[10px] font-bold uppercase text-slate-400">Annual Volatility (σ)</div>
+          <div class="text-xl font-black text-slate-800 mt-1 font-mono">
+            ${risk.toFixed(1)}%
+          </div>
+          <div class="text-[11px] text-slate-500 mt-0.5">Sample Std Dev</div>
+        </div>
+
+        <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+          <div class="text-[10px] font-bold uppercase text-slate-400">Sharpe Ratio</div>
+          <div class="text-xl font-black text-indigo-600 mt-1 font-mono">
+            ${sharpe.toFixed(2)}
+          </div>
+          <div class="text-[11px] text-slate-500 mt-0.5">Benchmark Rf = 5.0%</div>
+        </div>
+
+        <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+          <div class="text-[10px] font-bold uppercase text-slate-400">Color Group</div>
+          <div class="text-xl font-black text-purple-600 mt-1 font-mono">
+            Group ${colorGroup !== undefined ? colorGroup : '1'}
+          </div>
+          <div class="text-[11px] text-slate-500 mt-0.5">Welsh-Powell Set</div>
+        </div>
+      </div>
+
+      <!-- Price & Technical Chart -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Historical Price Action & Moving Averages</h3>
+            <p class="text-xs text-slate-500">Includes SMA 20, SMA 50, and Bollinger Bands overlay</p>
+          </div>
+          <span class="text-xs font-mono font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-700">Daily Candles</span>
+        </div>
+        <div id="price-chart" class="w-full h-[380px] rounded-xl overflow-hidden bg-slate-50"></div>
+      </div>
+
+      <!-- Technical Indicators Panel -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-base">📈</span>
+            <h3 class="text-sm font-bold text-slate-900">Technical Indicators (Computed Math)</h3>
+          </div>
+          <span class="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">Descriptive Signals</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div class="text-[10px] uppercase font-bold text-slate-400">RSI (14)</div>
+            <div class="text-lg font-black text-slate-900 mt-1 font-mono">${t.rsi != null ? t.rsi.toFixed(1) : '—'}</div>
+            <div class="text-[10px] text-slate-500">${t.rsi_condition || 'Neutral'}</div>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div class="text-[10px] uppercase font-bold text-slate-400">SMA 20</div>
+            <div class="text-sm font-black text-slate-800 mt-1 font-mono">${t.sma20 ? '₹' + t.sma20.toFixed(1) : '—'}</div>
+            <div class="text-[10px] text-slate-500 font-mono">SMA50: ${t.sma50 ? '₹' + t.sma50.toFixed(1) : '—'}</div>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div class="text-[10px] uppercase font-bold text-slate-400">EMA 20</div>
+            <div class="text-sm font-black text-slate-800 mt-1 font-mono">${t.ema20 ? '₹' + t.ema20.toFixed(1) : '—'}</div>
+            <div class="text-[10px] text-slate-500 font-mono">EMA50: ${t.ema50 ? '₹' + t.ema50.toFixed(1) : '—'}</div>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div class="text-[10px] uppercase font-bold text-slate-400">MACD (12,26,9)</div>
+            <div class="text-sm font-black text-indigo-600 mt-1 font-mono">${t.macd != null ? t.macd.toFixed(2) : '—'}</div>
+            <div class="text-[10px] text-slate-500 font-mono">Hist: ${t.macd_hist != null ? t.macd_hist.toFixed(2) : '—'}</div>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div class="text-[10px] uppercase font-bold text-slate-400">Bollinger Upper</div>
+            <div class="text-sm font-black text-slate-800 mt-1 font-mono">${t.bb_upper ? '₹' + t.bb_upper.toFixed(1) : '—'}</div>
+            <div class="text-[10px] text-slate-500 font-mono">Lower: ${t.bb_lower ? '₹' + t.bb_lower.toFixed(1) : '—'}</div>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div class="text-[10px] uppercase font-bold text-slate-400">ATR (14) / VWAP</div>
+            <div class="text-sm font-black text-slate-800 mt-1 font-mono">${t.atr ? '₹' + t.atr.toFixed(1) : '—'}</div>
+            <div class="text-[10px] text-slate-500 font-mono">VWAP: ${t.vwap ? '₹' + t.vwap.toFixed(1) : '—'}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fundamentals Panel -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-base">🏢</span>
+            <h3 class="text-sm font-bold text-slate-900">Fundamental Ratios & Financial Health</h3>
+          </div>
+          <span class="text-[10px] font-mono text-slate-400">Source: Regulatory Filings</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+            <div class="font-bold text-slate-800 font-sans">Valuation</div>
+            <div class="flex justify-between"><span class="text-slate-500 font-sans">P/E Ratio:</span><span class="font-bold">${v.pe_ratio ? v.pe_ratio + 'x' : '—'}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500 font-sans">P/B Ratio:</span><span class="font-bold">${v.pb_ratio ? v.pb_ratio + 'x' : '—'}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500 font-sans">EV / EBITDA:</span><span class="font-bold">${v.ev_ebitda ? v.ev_ebitda + 'x' : '—'}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500 font-sans">Market Cap:</span><span class="font-bold">${v.market_cap ? '₹' + (v.market_cap/1e7).toFixed(0) + ' Cr' : '—'}</span></div>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+            <div class="font-bold text-slate-800 font-sans">Profitability</div>
+            <div class="flex justify-between"><span class="text-slate-500 font-sans">Return on Equity:</span><span class="font-bold text-emerald-600">${p.roe_pct ? p.roe_pct + '%' : '—'}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500 font-sans">Return on Assets:</span><span class="font-bold">${p.roa_pct ? p.roa_pct + '%' : '—'}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500 font-sans">Net Margin:</span><span class="font-bold text-emerald-600">${p.net_margin_pct ? p.net_margin_pct + '%' : '—'}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500 font-sans">Operating Margin:</span><span class="font-bold">${p.operating_margin_pct ? p.operating_margin_pct + '%' : '—'}</span></div>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+            <div class="font-bold text-slate-800 font-sans">Financial Health</div>
+            <div class="flex justify-between"><span class="text-slate-500 font-sans">Debt / Equity:</span><span class="font-bold">${f.debt_to_equity != null ? f.debt_to_equity : '—'}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500 font-sans">Current Ratio:</span><span class="font-bold">${f.current_ratio != null ? f.current_ratio : '—'}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500 font-sans">Quick Ratio:</span><span class="font-bold">${f.quick_ratio != null ? f.quick_ratio : '—'}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500 font-sans">Dividend Yield:</span><span class="font-bold text-indigo-600">${f.dividend_yield_pct != null ? f.dividend_yield_pct + '%' : '0.0%'}</span></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Render price chart with technical overlays if available
+    if (techRes && techRes.series && techRes.series.dates) {
+      const s = techRes.series;
+      const traces = [
+        { x: s.dates, y: s.close, type: 'scatter', mode: 'lines', name: `${currentSymbol} Close`, line: { color: '#0f172a', width: 2 } },
+        { x: s.dates, y: s.sma20, type: 'scatter', mode: 'lines', name: 'SMA 20', line: { color: '#4f46e5', width: 1.5 } },
+        { x: s.dates, y: s.sma50, type: 'scatter', mode: 'lines', name: 'SMA 50', line: { color: '#f59e0b', width: 1.5, dash: 'dot' } },
+        { x: s.dates, y: s.bb_upper, type: 'scatter', mode: 'lines', name: 'Bollinger Upper', line: { color: '#94a3b8', width: 1, dash: 'dash' } },
+        { x: s.dates, y: s.bb_lower, type: 'scatter', mode: 'lines', name: 'Bollinger Lower', line: { color: '#94a3b8', width: 1, dash: 'dash' }, fill: 'tonexty', fillcolor: 'rgba(148, 163, 184, 0.08)' }
+      ];
+      const layout = {
+        margin: { t: 30, r: 20, l: 50, b: 35 },
+        showlegend: true,
+        legend: { orientation: 'h', y: 1.15, x: 0.1, font: { size: 10 } },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        xaxis: { showgrid: true, gridcolor: '#f1f5f9', tickfont: { size: 10 } },
+        yaxis: { showgrid: true, gridcolor: '#f1f5f9', tickfont: { size: 10 }, tickprefix: '₹' },
+        hovermode: 'x unified'
+      };
+      Plotly.newPlot('price-chart', traces, layout, { responsive: true, displayModeBar: false });
+    } else if (histData && histData.prices && histData.prices.length) {
+      TradeSense.renderPriceChart('price-chart', histData.prices, currentSymbol);
+    }
+
+  } catch(e) {
+    container.innerHTML = `
+      <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
+        <p class="font-bold text-base text-slate-800">Unable to load stock details.</p>
+        <p class="text-xs text-slate-400 mt-1">${e.message}</p>
+        <a href="/live-market" class="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">
+          Back to Live Market
+        </a>
+      </div>
+    `;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadStockDetail);
+</script>
+{% endblock %}

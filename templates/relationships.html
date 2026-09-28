@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Relationships — Pearson Correlation Network{% endblock %}
+{% block page_title %}🔗 Relationships & Pearson Correlation{% endblock %}
+{% block page_subtitle %}Quantifying linear co-movement between assets across aligned daily return time-series{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Top Metric Cards -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Matrix Properties</div>
+      <div class="text-sm font-bold text-emerald-600 mt-1 flex items-center gap-1">
+        <span>✓</span> Symmetric & Bounded [-1, 1]
+      </div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Diagonal Identity = 1.0</div>
+    </div>
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Highest Correlation Pair</div>
+      <div id="stat-max-pair" class="text-sm font-black text-slate-900 mt-1 truncate">TCS ↔ INFY</div>
+      <div id="stat-max-val" class="text-[11px] text-amber-600 font-bold font-mono mt-0.5">r = 0.884</div>
+    </div>
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Lowest Correlation Pair</div>
+      <div id="stat-min-pair" class="text-sm font-black text-slate-900 mt-1 truncate">HDFC ↔ TCS</div>
+      <div id="stat-min-val" class="text-[11px] text-indigo-600 font-bold font-mono mt-0.5">r = 0.120</div>
+    </div>
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Average Matrix Correlation</div>
+      <div id="stat-mean-corr" class="text-xl font-black text-slate-800 mt-1 font-mono">0.452</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Across all C(N,2) pairs</div>
+    </div>
+  </div>
+
+  <!-- Heatmap & Pairwise Relationships Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    
+    <!-- Heatmap Column (8 cols) -->
+    <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Pearson Correlation Matrix Heatmap</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Colors scale from -1.0 (uncorrelated/inverse) to +1.0 (lockstep co-movement)</p>
+        </div>
+        <div class="flex items-center gap-1 text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">
+          <span>N = 12 Stocks</span>
+        </div>
+      </div>
+
+      <!-- Plotly Heatmap Container -->
+      <div id="correlation-heatmap" class="w-full h-[520px] rounded-xl overflow-hidden">
+        <div class="flex items-center justify-center h-full text-slate-400 text-xs">
+          <span class="animate-spin mr-2">⚙️</span> Computing Pearson Correlation Matrix...
+        </div>
+      </div>
+    </div>
+
+    <!-- Strongest Pairs & Concept (4 cols) -->
+    <div class="lg:col-span-4 space-y-6">
+      
+      <!-- Strong Pairs List -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Top Co-Moving Pairs</h4>
+          <span class="text-[10px] text-indigo-600 font-mono font-bold">r ≥ 0.70</span>
+        </div>
+        <div id="strong-pairs-container" class="space-y-2 text-xs">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+      <!-- Financial Meaning Box -->
+      <div class="bg-indigo-950 text-white rounded-2xl p-5 border border-indigo-900 space-y-2">
+        <div class="flex items-center gap-2 text-indigo-300 font-bold text-xs">
+          <span>💡</span> Why Correlation Matters
+        </div>
+        <p class="text-xs text-indigo-100/80 leading-relaxed">
+          High correlation ($r > 0.70$) indicates redundant market risk. If two stocks move together, holding both fails to reduce risk. True portfolio diversification requires pairing assets with low or near-zero correlation.
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadCorrelationPage() {
+  try {
+    const res = await TradeSense.apiCall('/api/correlation');
+    if (!res || !res.matrix) return;
+
+    const matrix = res.matrix;
+    const tickers = res.tickers || [];
+    const stats = res.stats || {};
+    const pairs = res.strong_pairs || [];
+
+    // Stats
+    if (stats.max_pair) {
+      document.getElementById('stat-max-pair').textContent = `${stats.max_pair[0]} ↔ ${stats.max_pair[1]}`;
+      document.getElementById('stat-max-val').textContent = `r = ${(stats.max_corr || 0).toFixed(3)}`;
+    }
+    if (stats.min_pair) {
+      document.getElementById('stat-min-pair').textContent = `${stats.min_pair[0]} ↔ ${stats.min_pair[1]}`;
+      document.getElementById('stat-min-val').textContent = `r = ${(stats.min_corr || 0).toFixed(3)}`;
+    }
+    if (stats.mean_corr !== undefined) {
+      document.getElementById('stat-mean-corr').textContent = stats.mean_corr.toFixed(3);
+    }
+
+    // Render Heatmap
+    TradeSense.renderCorrelationHeatmap('correlation-heatmap', matrix, tickers);
+
+    // Render Pairs
+    const container = document.getElementById('strong-pairs-container');
+    if (container && pairs.length > 0) {
+      container.innerHTML = pairs.slice(0, 6).map(p => `
+        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+          <span class="font-bold text-slate-800">${p.stock_a} ↔ ${p.stock_b}</span>
+          <span class="font-mono font-bold text-amber-600">r = ${(p.correlation || 0).toFixed(3)}</span>
+        </div>
+      `).join('');
+    }
+  } catch(e) {
+    console.error("Correlation page error:", e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadCorrelationPage);
+</script>
+{% endblock %}

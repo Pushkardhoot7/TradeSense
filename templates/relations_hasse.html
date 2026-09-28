@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Relations & Hasse{% endblock %}
+{% block page_title %}Dominance Relations & Hasse Diagram{% endblock %}
+{% block page_subtitle %}Partial Order · Reflexive · Antisymmetric · Transitive · Transitive Reduction{% endblock %}
+
+{% block content %}
+
+<!-- Relation Definition -->
+<div class="section-card mb-6">
+  <h2>≽ Dominance Relation Definition</h2>
+  <div class="formula-box mt-3 mb-4">
+    A ≽ B &nbsp;⟺&nbsp; Return(A) ≥ Return(B) &nbsp;AND&nbsp; Risk(A) ≤ Risk(B)
+  </div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="poset-property-cards">
+    <div class="prop-check valid">
+      <span class="prop-icon">🔄</span>
+      <div><div class="font-semibold text-sm text-green-700">REFLEXIVE</div><div class="text-xs text-slate-500">A ≽ A always</div></div>
+    </div>
+    <div class="prop-check valid" id="prop-antisym">
+      <span class="prop-icon">↔</span>
+      <div><div class="font-semibold text-sm">ANTISYMMETRIC</div><div class="text-xs text-slate-500" id="antisym-note">Loading...</div></div>
+    </div>
+    <div class="prop-check valid" id="prop-trans">
+      <span class="prop-icon">→</span>
+      <div><div class="font-semibold text-sm">TRANSITIVE</div><div class="text-xs text-slate-500" id="trans-note">Loading...</div></div>
+    </div>
+    <div class="prop-check valid" id="prop-po">
+      <span class="prop-icon">📐</span>
+      <div><div class="font-semibold text-sm" id="po-label">PARTIAL ORDER</div><div class="text-xs text-slate-500" id="po-note">Loading...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Relation Matrix + Pairs Table -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="section-card">
+    <h2>Relation Matrix M[i,j]</h2>
+    <p class="section-subtitle">M[i,j]=1 means stock i dominates stock j</p>
+    <div class="overflow-auto mt-3">
+      <table class="ts-table text-xs" id="relation-matrix-table">
+        <thead><tr><th>Stock</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="section-card">
+    <h2>Dominance Pairs</h2>
+    <p class="section-subtitle">All (A, B) where A ≽ B</p>
+    <div class="overflow-auto" style="max-height:360px">
+      <table class="ts-table" id="pairs-table">
+        <thead><tr><th>Dominant</th><th>Dominated</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="mt-3 grid grid-cols-2 gap-3" id="nondom-cards"></div>
+  </div>
+</div>
+
+<!-- Hasse Diagram -->
+<div class="section-card mb-6">
+  <h2>📊 Hasse Diagram — Transitive Reduction</h2>
+  <p class="section-subtitle">Only essential (cover) edges shown. Transitive edges removed. Top = most dominant stocks.</p>
+  <div id="hasse-chart" style="height:480px"></div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3" id="hasse-info-cards"></div>
+</div>
+
+<!-- Explanation -->
+<div class="section-card">
+  <h2>📚 Partial Order Theory</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+    <div class="explanation-box"><div class="ex-label">Reflexive</div><div class="ex-text">Every stock dominates itself: Return(A)≥Return(A) and Risk(A)≤Risk(A). Always TRUE.</div></div>
+    <div class="explanation-box"><div class="ex-label">Antisymmetric</div><div class="ex-text">If A≽B and B≽A then A=B (or they are tied). Ties form equivalence classes.</div></div>
+    <div class="explanation-box"><div class="ex-label">Transitive</div><div class="ex-text">If A≽B and B≽C then A≽C. Return(A)≥Return(B)≥Return(C) and Risk(A)≤Risk(B)≤Risk(C).</div></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadRelations() {
+  try {
+    const [relData, hassData] = await Promise.all([
+      TradeSense.apiCall('/api/relation'),
+      TradeSense.apiCall('/api/hasse'),
+    ]);
+    const poset = await TradeSense.apiCall('/api/poset');
+
+    // Poset property cards
+    const setCard = (id, valid, note) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.className = 'prop-check ' + (valid ? 'valid' : 'invalid');
+      const noteEl = el.querySelector('.text-xs');
+      if (noteEl) noteEl.textContent = note || '';
+    };
+    setCard('prop-antisym', poset.is_antisymmetric, poset.antisymmetric_note || (poset.is_antisymmetric ? 'No mutual domination' : 'Tied pairs exist'));
+    setCard('prop-trans',   poset.is_transitive,    poset.transitive_note   || (poset.is_transitive ? 'Transitivity holds' : 'Violation found'));
+    setCard('prop-po',      poset.is_partial_order, poset.is_partial_order ? 'Valid partial order' : 'Not a partial order');
+    const pol = document.getElementById('po-label');
+    if (pol) pol.textContent = poset.is_partial_order ? 'PARTIAL ORDER ✓' : 'NOT PARTIAL ORDER';
+
+    // Relation matrix
+    const tickers = relData.tickers || [];
+    const matrix  = relData.relation_matrix || [];
+    const thead = document.querySelector('#relation-matrix-table thead tr');
+    const tbody = document.querySelector('#relation-matrix-table tbody');
+    if (thead && matrix.length && tickers.length) {
+      thead.innerHTML = '<th>Stock\u2193 / Stock\u2192</th>' + tickers.map(t => `<th>${t.replace('.NS','')}</th>`).join('');
+      tbody.innerHTML = matrix.map((row, i) =>
+        `<tr><td class="font-semibold">${tickers[i]?.replace('.NS','')}</td>` +
+        row.map(v => `<td class="${v === 1 ? 'bg-indigo-100 font-bold text-indigo-700' : 'text-slate-300'}">${v}</td>`).join('') +
+        '</tr>'
+      ).join('');
+    }
+
+    // Pairs table
+    const pairs = relData.relation_pairs || [];
+    const ptbody = document.querySelector('#pairs-table tbody');
+    if (ptbody) ptbody.innerHTML = pairs.slice(0, 50).map(p =>
+      `<tr><td class="font-semibold text-indigo-700">${p.dominator?.replace('.NS','')}</td><td>${p.dominated?.replace('.NS','')}</td></tr>`
+    ).join('') || '<tr><td colspan="2" class="text-slate-400">No pairs</td></tr>';
+
+    // Non-dominated
+    const nondom = relData.non_dominated || [];
+    const nc = document.getElementById('nondom-cards');
+    if (nc) nc.innerHTML = `
+      <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+        <div class="text-xs font-semibold text-green-700 mb-1">Non-Dominated Stocks</div>
+        <div class="text-sm text-green-800">${nondom.map(s => s.replace('.NS','')).join(', ') || 'None'}</div>
+      </div>
+      <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+        <div class="text-xs font-semibold text-slate-600 mb-1">Total Pairs</div>
+        <div class="text-lg font-bold text-slate-800">${pairs.length}</div>
+      </div>`;
+
+    // Hasse diagram
+    TradeSense.renderHasseDiagram('hasse-chart', hassData);
+
+    // Hasse info
+    const hi = document.getElementById('hasse-info-cards');
+    if (hi) hi.innerHTML = [
+      ['Cover Edges', (hassData.cover_relation||[]).length],
+      ['Maximal Elements', (hassData.maximal_elements||[]).join(', ').replace(/\.NS/g,'') || '—'],
+      ['Minimal Elements', (hassData.minimal_elements||[]).join(', ').replace(/\.NS/g,'') || '—'],
+      ['Levels', Object.keys(hassData.levels||{}).length],
+    ].map(([l,v]) => `<div class="bg-slate-50 rounded-lg p-3 text-center"><div class="font-bold text-indigo-700 text-sm">${v}</div><div class="text-xs text-slate-500">${l}</div></div>`).join('');
+
+  } catch(e) { console.error('Relations load error:', e); }
+}
+
+document.addEventListener('DOMContentLoaded', loadRelations);
+</script>
+{% endblock %}

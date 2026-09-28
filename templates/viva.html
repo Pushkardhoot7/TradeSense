@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Project Viva Demo & Q&A{% endblock %}
+{% block page_title %}🎯 Project Viva Evaluation & Guided Flow{% endblock %}
+{% block page_subtitle %}Comprehensive viva preparation: 12 key project questions, theoretical justifications, and architecture defense{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Viva Header Banner -->
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 text-white p-6 shadow-xl">
+    <div class="max-w-3xl space-y-2">
+      <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+        <span>🏆</span> Evaluation Ready
+      </div>
+      <h2 class="text-xl sm:text-2xl font-black text-white">
+        TradeSense Capstone Viva Defense & Core Q&A
+      </h2>
+      <p class="text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
+        A structured walkthrough designed for evaluation: explains why discrete mathematics provides superior interpretability compared to unconstrained black-box ML models in finance.
+      </p>
+    </div>
+  </div>
+
+  <!-- 12 Structured Viva Q&A Accordion -->
+  <div class="space-y-4" id="viva-accordion">
+
+    <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+      <div class="flex items-center justify-between text-xs font-bold text-indigo-600">
+        <span>Question 1 of 12</span>
+        <span class="bg-indigo-50 px-2 py-0.5 rounded">Core Problem Statement</span>
+      </div>
+      <h3 class="text-sm font-bold text-slate-900">What is the central problem TradeSense solves?</h3>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Traditional quantitative finance relies heavily on Markowitz mean-variance optimization, which is notoriously sensitive to estimation errors and acts as a mathematical "black box". TradeSense replaces unconstrained optimization with <strong>discrete structural constraints</strong>: graph network sparsification, partial orders (Posets), and vertex coloring to build transparent, explainable, and robust portfolios.
+      </p>
+    </div>
+
+    <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+      <div class="flex items-center justify-between text-xs font-bold text-indigo-600">
+        <span>Question 2 of 12</span>
+        <span class="bg-indigo-50 px-2 py-0.5 rounded">Graph Theory</span>
+      </div>
+      <h3 class="text-sm font-bold text-slate-900">Why do we represent the stock market as a graph G = (V, E)?</h3>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Stocks do not move in isolation; systemic risk propagates through market channels. By defining stocks as vertices $V$ and correlations $r \ge \theta$ as edges $E$, we capture the <strong>topology of co-movements</strong>. Central vertices (high degree) represent systemic bellwethers, while disconnected components indicate isolated risk clusters.
+      </p>
+    </div>
+
+    <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+      <div class="flex items-center justify-between text-xs font-bold text-indigo-600">
+        <span>Question 3 of 12</span>
+        <span class="bg-indigo-50 px-2 py-0.5 rounded">Graph Coloring</span>
+      </div>
+      <h3 class="text-sm font-bold text-slate-900">How does Welsh-Powell graph coloring guarantee diversification?</h3>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        By mathematical definition, no two adjacent vertices share the same color. Since an edge exists between two stocks only if their historical correlation $r \ge \theta$, stocks in the same color class are an <strong>independent set</strong>: their correlation is strictly bounded below $\theta$. Selecting one stock per color group guarantees low historical co-movement exposure.
+      </p>
+    </div>
+
+    <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+      <div class="flex items-center justify-between text-xs font-bold text-indigo-600">
+        <span>Question 4 of 12</span>
+        <span class="bg-indigo-50 px-2 py-0.5 rounded">Partially Ordered Sets</span>
+      </div>
+      <h3 class="text-sm font-bold text-slate-900">What is the dominance relation, and why is it a Partial Order?</h3>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Stock $A$ dominates stock $B$ ($A \succeq B$) if $\text{Return}(A) \ge \text{Return}(B)$ and $\text{Risk}(A) \le \text{Risk}(B)$. It is a partial order because it is reflexive, antisymmetric, and transitive. Because two stocks may have higher return but also higher risk, not all pairs are comparable — thus it is a <em>partial</em> order, not a total order.
+      </p>
+    </div>
+
+    <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+      <div class="flex items-center justify-between text-xs font-bold text-indigo-600">
+        <span>Question 5 of 12</span>
+        <span class="bg-indigo-50 px-2 py-0.5 rounded">Hasse Diagram</span>
+      </div>
+      <h3 class="text-sm font-bold text-slate-900">What is transitive reduction, and how does it create the Hasse diagram?</h3>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        If $A \succeq B$ and $B \succeq C$, then $A \succeq C$ by transitivity. Retaining the direct edge $(A, C)$ creates visual clutter and redundancy. Transitive reduction removes all implied composite edges, leaving only the <strong>cover relation</strong>. The maximal elements at the top of the Hasse DAG constitute the <strong>Pareto-optimal frontier</strong>.
+      </p>
+    </div>
+
+    <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+      <div class="flex items-center justify-between text-xs font-bold text-indigo-600">
+        <span>Question 6 of 12</span>
+        <span class="bg-indigo-50 px-2 py-0.5 rounded">Combinatorics</span>
+      </div>
+      <h3 class="text-sm font-bold text-slate-900">Why use Combinatorics C(n, k) rather than continuous weights?</h3>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Continuous quadratic programming often yields fractional, micro-weighted holdings (e.g. 0.4% in 40 stocks), incurring high transaction fees and rebalancing friction. Discrete combinatorics $C(n,k)$ evaluates equal-weighted portfolios of a manageable size (e.g., $k=3$ or $k=4$), ensuring practical real-world execution.
+      </p>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

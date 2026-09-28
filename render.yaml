@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: tradesense
+    env: python
+    buildCommand: pip install -r backend_requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: MARKET_DATA_PROVIDER
+        value: yfinance

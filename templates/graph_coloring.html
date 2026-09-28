@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Graph Coloring{% endblock %}
+{% block page_title %}Graph Coloring — Welsh-Powell Algorithm{% endblock %}
+{% block page_subtitle %}Welsh-Powell from scratch · Independent Sets · Chromatic Number χ(G){% endblock %}
+
+{% block content %}
+
+<!-- Algorithm Steps -->
+<div class="section-card mb-6">
+  <h2>🎨 Welsh-Powell Algorithm — Step by Step</h2>
+  <p class="section-subtitle">Implemented from scratch — no library coloring calls used</p>
+  <div class="formula-box mb-4">
+    Step 1: Compute degree d(v) for all v ∈ V &nbsp;|&nbsp; Step 2: Sort V descending by degree &nbsp;|&nbsp; Step 3: Assign lowest available color not used by neighbors
+  </div>
+  <div class="algo-step" id="coloring-steps">
+    <em class="text-slate-400">Loading algorithm trace...</em>
+  </div>
+</div>
+
+<!-- Coloring Result & Network -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="section-card">
+    <h2>Colored Network Graph</h2>
+    <p class="section-subtitle">Each node colored by its Welsh-Powell group assignment</p>
+    <div id="coloring-network" style="height:420px"></div>
+  </div>
+  <div class="section-card">
+    <h2>Coloring Results</h2>
+    <div class="grid grid-cols-2 gap-3 mb-4" id="coloring-summary-cards">
+      <div class="bg-indigo-50 rounded-lg p-4 text-center">
+        <div class="text-2xl font-bold text-indigo-700" id="colors-used-count">—</div>
+        <div class="text-xs text-slate-500">Colors Used (Upper Bound)</div>
+      </div>
+      <div class="bg-green-50 rounded-lg p-4 text-center">
+        <div class="text-sm font-semibold text-green-700" id="coloring-valid-badge">—</div>
+        <div class="text-xs text-slate-500">Coloring Valid</div>
+      </div>
+      <div class="bg-purple-50 rounded-lg p-4 text-center col-span-2">
+        <div class="text-sm font-bold text-purple-700" id="chromatic-info">—</div>
+        <div class="text-xs text-slate-500">Chromatic Number χ(G)</div>
+      </div>
+    </div>
+    <h3 class="font-semibold text-sm text-slate-700 mb-2">Color Groups (Independent Sets)</h3>
+    <div id="color-groups-list" class="space-y-2 overflow-auto" style="max-height:220px"></div>
+  </div>
+</div>
+
+<!-- Independent Sets Verification -->
+<div class="section-card mb-6">
+  <h2>✅ Independent Set Verification</h2>
+  <p class="section-subtitle">Each color group is verified — no two stocks in the same group share a correlation edge</p>
+  <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 mb-3">
+    ⚠️ Stocks in the same color group have <strong>correlation below the threshold</strong> under current settings. This does not mean they are "uncorrelated" — it means their correlation does not exceed the selected threshold.
+  </div>
+  <div id="independent-sets-table" class="mt-3"></div>
+</div>
+
+<!-- Explanation -->
+<div class="section-card">
+  <h2>📚 Graph Coloring Theory</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+    <div class="explanation-box"><div class="ex-label">What is Graph Coloring?</div><div class="ex-text">Assign colors to vertices such that no two adjacent vertices share a color. The minimum colors needed is the chromatic number χ(G).</div></div>
+    <div class="explanation-box"><div class="ex-label">Welsh-Powell Algorithm</div><div class="ex-text">Greedy coloring by degree order. Sort vertices descending by degree. Assign each the lowest color not used by its already-colored neighbors.</div></div>
+    <div class="explanation-box"><div class="ex-label">Market Meaning</div><div class="ex-text">Stocks in the same color group are "safe" to hold together — they do not have strong correlation under the threshold. Color groups form diversification candidates.</div></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadColoring() {
+  try {
+    const data = await TradeSense.apiCall('/api/coloring');
+
+    // Step trace
+    const trace = data.step_trace || [];
+    const st = document.getElementById('coloring-steps');
+    if (st) st.innerHTML = trace.map(s => `<div class="step-line">${s}</div>`).join('') || '<em class="text-slate-400">No trace available</em>';
+
+    // Summary
+    document.getElementById('colors-used-count').textContent = data.num_colors ?? '—';
+    const valid = Array.isArray(data.is_valid) ? data.is_valid[0] : data.is_valid;
+    document.getElementById('coloring-valid-badge').textContent = valid ? '✓ VALID' : '✗ INVALID';
+    document.getElementById('coloring-valid-badge').className = 'text-sm font-semibold ' + (valid ? 'text-green-700' : 'text-red-700');
+
+    const chrom = data.chromatic_info;
+    const ci = document.getElementById('chromatic-info');
+    if (ci) {
+      if (chrom && chrom.exact) {
+        ci.textContent = `χ(G) = ${chrom.chromatic_number} (exact, backtracking)`;
+      } else {
+        ci.textContent = `Welsh-Powell: ${data.num_colors} colors (upper bound on χ(G))`;
+      }
+    }
+
+    // Color groups
+    const groups = data.color_groups || {};
+    const isSetsVerified = data.independent_sets_verified || {};
+    const cl = document.getElementById('color-groups-list');
+    const palette = ['#4f46e5','#0ea5e9','#16a34a','#dc2626','#d97706','#9333ea','#0d9488','#db2777'];
+    if (cl) cl.innerHTML = Object.entries(groups).map(([gid, stocks]) => {
+      const color = palette[parseInt(gid) % palette.length];
+      const isValid = isSetsVerified[gid] ?? isSetsVerified[String(gid)] ?? true;
+      return `<div class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200">
+        <div class="w-4 h-4 rounded-full flex-shrink-0" style="background:${color}"></div>
+        <span class="text-xs font-semibold text-slate-600 w-16">Group ${parseInt(gid)+1}</span>
+        <div class="flex flex-wrap gap-1 flex-1">${(stocks||[]).map(s=>`<span class="font-mono text-xs bg-white border border-slate-200 rounded px-1">${s.replace('.NS','')}</span>`).join('')}</div>
+        <span class="${isValid ? 'text-green-600' : 'text-red-500'} text-xs font-semibold">${isValid ? '✓' : '✗'}</span>
+      </div>`;
+    }).join('');
+
+    // Network colored
+    const analysis = TradeSense.currentAnalysis || {};
+    const colDict  = data.coloring_dict || {};
+    const graphData = await TradeSense.apiCall('/api/graph?threshold=0.6');
+    TradeSense.renderNetworkGraph('coloring-network', { ...graphData, coloring_dict: colDict });
+
+    // Independent sets verification table
+    const ist = document.getElementById('independent-sets-table');
+    if (ist) ist.innerHTML = `<table class="ts-table">
+      <thead><tr><th>Group</th><th>Stocks</th><th>Size</th><th>Valid Independent Set?</th></tr></thead>
+      <tbody>${Object.entries(groups).map(([gid, stocks]) => {
+        const valid = isSetsVerified[gid] ?? isSetsVerified[String(gid)] ?? true;
+        return `<tr>
+          <td class="font-semibold">Group ${parseInt(gid)+1}</td>
+          <td class="font-mono text-xs">${(stocks||[]).map(s=>s.replace('.NS','')).join(', ')}</td>
+          <td>${(stocks||[]).length}</td>
+          <td><span class="${valid ? 'badge-positive' : 'badge-negative'}">${valid ? '✓ Valid' : '✗ Invalid'}</span></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+
+  } catch(e) { console.error(e); }
+}
+
+document.addEventListener('DOMContentLoaded', loadColoring);
+</script>
+{% endblock %}

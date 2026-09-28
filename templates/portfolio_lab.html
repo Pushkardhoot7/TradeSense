@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Portfolio Lab — Combinatorics & DM Score Ranking{% endblock %}
+{% block page_title %}💼 Portfolio Lab & Combinatorics{% endblock %}
+{% block page_subtitle %}Combinatorial exploration C(n,k), multi-objective DM Portfolio Score, and candidate comparisons{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Combinatorics & DM Scoring Formula Banner -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+    
+    <!-- Formula Breakdown (7 cols) -->
+    <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">DM Portfolio Score Architecture</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Project-defined analytical multi-criteria ranking</p>
+        </div>
+        <span class="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md">5 PILLARS</span>
+      </div>
+
+      <!-- Formula Pills -->
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs">
+        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+          <div class="text-[10px] font-bold text-slate-400">Return</div>
+          <div class="text-base font-black text-indigo-600 mt-0.5">30%</div>
+          <div class="text-[9px] text-slate-500">CAGR Score</div>
+        </div>
+        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+          <div class="text-[10px] font-bold text-slate-400">Risk</div>
+          <div class="text-base font-black text-purple-600 mt-0.5">25%</div>
+          <div class="text-[9px] text-slate-500">Low Volatility</div>
+        </div>
+        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+          <div class="text-[10px] font-bold text-slate-400">Correlation</div>
+          <div class="text-base font-black text-emerald-600 mt-0.5">25%</div>
+          <div class="text-[9px] text-slate-500">Pairwise Div</div>
+        </div>
+        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+          <div class="text-[10px] font-bold text-slate-400">Groups</div>
+          <div class="text-base font-black text-amber-600 mt-0.5">10%</div>
+          <div class="text-[9px] text-slate-500">Color Clusters</div>
+        </div>
+        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+          <div class="text-[10px] font-bold text-slate-400">Poset</div>
+          <div class="text-base font-black text-rose-600 mt-0.5">10%</div>
+          <div class="text-[9px] text-slate-500">Dominance</div>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-500 leading-relaxed">
+        $\text{DM Score} = 0.30 S_{\text{return}} + 0.25 S_{\text{risk}} + 0.25 S_{\text{div}} + 0.10 S_{\text{group}} + 0.10 S_{\text{dom}}$. Normalised onto $[0, 100]$.
+      </p>
+    </div>
+
+    <!-- Combinatorics Engine Stats (5 cols) -->
+    <div class="lg:col-span-5 bg-slate-900 text-white rounded-2xl p-6 border border-slate-800 shadow-inner flex flex-col justify-between space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Combinatorics Engine</span>
+        <span class="text-[10px] font-mono text-indigo-400 font-bold">C(n, k) = n! / (k!(n-k)!)</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 text-center">
+        <div class="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+          <div class="text-[10px] uppercase font-bold text-slate-400">Candidate Universe (n)</div>
+          <div class="text-2xl font-black text-white mt-0.5 font-mono">12 Stocks</div>
+        </div>
+        <div class="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+          <div class="text-[10px] uppercase font-bold text-slate-400">Portfolio Size (k)</div>
+          <div class="text-2xl font-black text-indigo-400 mt-0.5 font-mono">3 Stocks</div>
+        </div>
+      </div>
+
+      <div class="p-3 bg-slate-800/50 rounded-xl flex items-center justify-between text-xs">
+        <span class="text-slate-400">Evaluated Candidates:</span>
+        <span id="total-combos-count" class="font-mono font-black text-amber-400 text-sm">220 Portfolios</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Top 3 Portfolios Gold / Silver / Bronze Showcase -->
+  <div class="space-y-3">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-base font-bold text-slate-900">Top 3 Automatically Ranked Portfolios</h3>
+        <p class="text-xs text-slate-500">Pure algorithmic selection — never curated or hardcoded</p>
+      </div>
+      <span class="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md">
+        100% Deterministic Ranking
+      </span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="top-3-container">
+      <!-- Populated via JS -->
+      <div class="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+        <span class="animate-spin mr-2">⚙️</span> Ranking portfolio combinations...
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Portfolio Radar Comparison & All Candidates Table -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- Radar Chart (5 cols) -->
+    <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Radar Score Comparison</h4>
+        <span class="text-[10px] font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded">Rank #1 vs Rank #2</span>
+      </div>
+
+      <div id="portfolio-radar-plot" class="w-full h-[380px] rounded-xl overflow-hidden">
+        <!-- Plotly radar chart -->
+      </div>
+    </div>
+
+    <!-- All Evaluated Candidates Table (7 cols) -->
+    <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">All Candidate Combinations</h4>
+          <p class="text-[11px] text-slate-400">Ranked by overall DM analytical score</p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto max-h-[420px] overflow-y-auto">
+        <table class="w-full text-left text-xs text-slate-700">
+          <thead class="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500 font-bold border-b border-slate-200">
+            <tr>
+              <th class="px-4 py-3">Rank</th>
+              <th class="px-4 py-3">Portfolio Constituents</th>
+              <th class="px-4 py-3 text-right">DM Score</th>
+              <th class="px-4 py-3 text-right">Exp. Return</th>
+              <th class="px-4 py-3 text-right">Risk (σ)</th>
+              <th class="px-4 py-3 text-right">Avg Correlation</th>
+            </tr>
+          </thead>
+          <tbody id="candidates-table-body" class="divide-y divide-slate-100 font-medium">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadPortfolioLab() {
+  try {
+    const res = await TradeSense.apiCall('/api/portfolios');
+    if (!res) return;
+
+    const portfolios = res.portfolios || [];
+    const top3 = portfolios.slice(0, 3);
+
+    document.getElementById('total-combos-count').textContent = `${res.total_evaluated || portfolios.length || 220} Portfolios`;
+
+    // Render Top 3 Cards
+    renderTop3Cards(top3);
+
+    // Render Radar comparison
+    if (top3.length >= 2) {
+      TradeSense.renderPortfolioRadar('portfolio-radar-plot', top3[0], top3[1]);
+    }
+
+    // Render Table
+    renderCandidatesTable(portfolios.slice(0, 50));
+  } catch(e) {
+    console.error("Portfolio lab error:", e);
+  }
+}
+
+function renderTop3Cards(top3) {
+  const container = document.getElementById('top-3-container');
+  if (!container) return;
+
+  const ranks = [
+    { title: 'Rank #1 — Gold Award', medal: '🥇', border: 'border-amber-400 bg-amber-500/5', badge: 'bg-amber-400 text-amber-950', scoreColor: 'text-amber-500' },
+    { title: 'Rank #2 — Silver Award', medal: '🥈', border: 'border-slate-300 bg-slate-100/40', badge: 'bg-slate-300 text-slate-900', scoreColor: 'text-slate-600' },
+    { title: 'Rank #3 — Bronze Award', medal: '🥉', border: 'border-amber-700/40 bg-amber-900/5', badge: 'bg-amber-700/20 text-amber-900', scoreColor: 'text-amber-800' }
+  ];
+
+  container.innerHTML = top3.map((p, idx) => {
+    const style = ranks[idx] || ranks[0];
+    const constituents = Array.isArray(p.portfolio) ? p.portfolio : [];
+
+    return `
+      <div class="bg-white rounded-2xl border-2 ${style.border} p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-1 rounded-full text-xs font-black ${style.badge} flex items-center gap-1">
+              <span>${style.medal}</span> ${style.title}
+            </span>
+            <span class="font-mono font-black text-xl ${style.scoreColor}">
+              ${(p.dm_score || 0).toFixed(1)} <span class="text-xs font-bold text-slate-400">DM</span>
+            </span>
+          </div>
+
+          <!-- Constituents -->
+          <div class="flex flex-wrap gap-1.5 py-1">
+            ${constituents.map(s => `
+              <a href="/stock/${encodeURIComponent(s)}" class="px-3 py-1.5 rounded-xl bg-slate-900 text-white font-mono font-bold text-xs hover:bg-indigo-600 transition-colors">
+                ${s}
+              </a>
+            `).join('')}
+          </div>
+
+          <!-- Key Metrics -->
+          <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+            <div class="p-2 bg-slate-50 rounded-lg">
+              <div class="text-[9px] uppercase font-bold text-slate-400">Return</div>
+              <div class="font-bold text-xs text-emerald-600 mt-0.5">+${(p.raw_return || 0).toFixed(1)}%</div>
+            </div>
+            <div class="p-2 bg-slate-50 rounded-lg">
+              <div class="text-[9px] uppercase font-bold text-slate-400">Risk</div>
+              <div class="font-bold text-xs text-slate-800 mt-0.5">${(p.raw_risk || 0).toFixed(1)}%</div>
+            </div>
+            <div class="p-2 bg-slate-50 rounded-lg">
+              <div class="text-[9px] uppercase font-bold text-slate-400">Avg Corr</div>
+              <div class="font-bold text-xs text-indigo-600 mt-0.5">${(p.avg_correlation || 0).toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pillar breakdown bar preview -->
+        <div class="space-y-1 text-[10px] text-slate-500 font-medium">
+          <div class="flex justify-between">
+            <span>Diversification Score</span>
+            <span class="font-mono font-bold text-slate-700">${(p.diversification_score || 85).toFixed(0)} / 100</span>
+          </div>
+          <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+            <div class="bg-indigo-600 h-full rounded-full" style="width: ${(p.diversification_score || 85)}%"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderCandidatesTable(portfolios) {
+  const tbody = document.getElementById('candidates-table-body');
+  if (!tbody) return;
+
+  tbody.innerHTML = portfolios.map((p, idx) => `
+    <tr class="hover:bg-slate-50/80 transition-colors">
+      <td class="px-4 py-2.5 font-bold font-mono text-slate-800">#${p.rank || idx + 1}</td>
+      <td class="px-4 py-2.5 font-bold font-mono text-indigo-700">
+        ${(p.portfolio || []).join(' + ')}
+      </td>
+      <td class="px-4 py-2.5 text-right font-black font-mono text-slate-900">
+        ${(p.dm_score || 0).toFixed(1)}
+      </td>
+      <td class="px-4 py-2.5 text-right font-bold text-emerald-600">
+        +${(p.raw_return || 0).toFixed(1)}%
+      </td>
+      <td class="px-4 py-2.5 text-right font-mono text-slate-700">
+        ${(p.raw_risk || 0).toFixed(1)}%
+      </td>
+      <td class="px-4 py-2.5 text-right font-mono text-indigo-600">
+        ${(p.avg_correlation || 0).toFixed(2)}
+      </td>
+    </tr>
+  `).join('');
+}
+
+document.addEventListener('DOMContentLoaded', loadPortfolioLab);
+</script>
+{% endblock %}

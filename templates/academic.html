@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Academic & Mathematical Notation{% endblock %}
+{% block page_title %}🎓 Discrete Mathematics Formalisms & Proofs{% endblock %}
+{% block page_subtitle %}Comprehensive mathematical specifications, formulas, complexity bounds, and algorithm pseudocode{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header Banner -->
+  <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 text-white p-6 shadow-xl">
+    <div class="max-w-3xl space-y-2">
+      <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
+        <span>📐</span> Rigorous Mathematical Documentation
+      </div>
+      <h2 class="text-xl sm:text-2xl font-black text-white">
+        Discrete Mathematics Formalisms & Algorithmic Complexity
+      </h2>
+      <p class="text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
+        TradeSense maps raw continuous financial time-series into discrete algebraic structures: undirected weighted graphs, partially ordered sets (Posets), transitive reductions (DAGs), independent chromatic vertex partitions, and combinatorial powersets.
+      </p>
+    </div>
+  </div>
+
+  <!-- Stage Cards Grid -->
+  <div class="grid grid-cols-1 gap-6">
+
+    <!-- Concept 1: Pearson Correlation & Adjacency Graph -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">🕸️</span>
+          <h3 class="text-base font-bold text-slate-900">1. Pearson Correlation Graph Construction $G = (V, E)$</h3>
+        </div>
+        <span class="text-xs font-mono bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded">Time Complexity: $\mathcal{O}(|V|^2 \cdot T)$</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div class="space-y-2">
+          <p class="font-bold text-slate-700">Mathematical Formulation:</p>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 font-mono text-[11px] text-slate-800">
+            $$r_{xy} = \frac{\sum_{t=1}^T (R_{x,t} - \bar{R}_x)(R_{y,t} - \bar{R}_y)}{\sqrt{\sum_{t=1}^T (R_{x,t} - \bar{R}_x)^2} \sqrt{\sum_{t=1}^T (R_{y,t} - \bar{R}_y)^2}}$$
+            <br/>
+            $$E = \{ (u, v) \in V \times V \mid u \neq v \text{ and } r_{uv} \ge \theta \}$$
+          </div>
+        </div>
+        <div class="space-y-2">
+          <p class="font-bold text-slate-700">Financial Meaning & Axioms:</p>
+          <ul class="list-disc list-inside space-y-1 text-slate-600">
+            <li><strong>Symmetry:</strong> $r_{xy} = r_{yx}$ ensures an undirected graph.</li>
+            <li><strong>Bounded:</strong> $r_{xy} \in [-1, +1]$ allows threshold filtering $\theta \in [0.50, 0.90]$.</li>
+            <li><strong>Graph Sparsification:</strong> Eliminates noise and retains only statistically significant co-movement channels.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Concept 2: Welsh-Powell Graph Coloring -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">🎨</span>
+          <h3 class="text-base font-bold text-slate-900">2. Welsh-Powell Greedy Vertex Coloring & Independent Sets</h3>
+        </div>
+        <span class="text-xs font-mono bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded">Time Complexity: $\mathcal{O}(|V|^2 + |E|)$</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div class="space-y-2">
+          <p class="font-bold text-slate-700">Algorithmic Procedure:</p>
+          <ol class="list-decimal list-inside space-y-1 text-slate-600">
+            <li>Compute vertex degree: $d(v) = |\{u \in V \mid (u,v) \in E\}|$.</li>
+            <li>Sort vertices in non-increasing order: $d(v_1) \ge d(v_2) \ge \dots \ge d(v_n)$.</li>
+            <li>Iterate through sorted vertices, assigning the minimal non-conflicting color integer $c \in \{0, 1, 2, \dots\}$.</li>
+          </ol>
+        </div>
+        <div class="space-y-2">
+          <p class="font-bold text-slate-700">Portfolio Diversification Theorem:</p>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 font-mono text-[11px] text-slate-800">
+            $$\forall v_i, v_j \in C_k, \quad (v_i, v_j) \notin E \implies r_{v_i, v_j} < \theta$$
+          </div>
+          <p class="text-slate-600">
+            Every color class $C_k$ forms an <strong>independent set</strong>. Selecting assets from distinct color classes strictly bounds cross-asset historical correlation.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Concept 3: Poset & Transitive Reduction -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">📐</span>
+          <h3 class="text-base font-bold text-slate-900">3. Partially Ordered Sets (Poset) & Hasse Cover Relation</h3>
+        </div>
+        <span class="text-xs font-mono bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded">Transitive Reduction: $\mathcal{O}(|V|^3)$</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div class="space-y-2">
+          <p class="font-bold text-slate-700">Dominance Relation $\succeq$:</p>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 font-mono text-[11px] text-slate-800">
+            $$A \succeq B \iff \mu(A) \ge \mu(B) \quad \text{and} \quad \sigma(A) \le \sigma(B)$$
+          </div>
+          <ul class="list-disc list-inside space-y-1 text-slate-600">
+            <li><strong>Reflexive:</strong> $A \succeq A$</li>
+            <li><strong>Antisymmetric:</strong> $A \succeq B \land B \succeq A \implies A \sim B$ (modulo tied equivalence)</li>
+            <li><strong>Transitive:</strong> $A \succeq B \land B \succeq C \implies A \succeq C$</li>
+          </ul>
+        </div>
+        <div class="space-y-2">
+          <p class="font-bold text-slate-700">Transitive Reduction (Hasse Cover DAG):</p>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 font-mono text-[11px] text-slate-800">
+            $$Cover(\succeq) = \{ (A, B) \in \succeq \mid A \neq B \text{ and } \nexists C \text{ s.t. } A \succeq C \succeq B \}$$
+          </div>
+          <p class="text-slate-600">
+            Removes redundant transitive shortcuts. Maximal elements (indegree 0 in Cover) represent the <strong>Pareto-optimal frontier</strong>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Concept 4: Combinatorics & DM Portfolio Score -->
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">💼</span>
+          <h3 class="text-base font-bold text-slate-900">4. Combinatorial Search $C(n, k)$ & 5-Pillar Portfolio Scoring</h3>
+        </div>
+        <span class="text-xs font-mono bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded">Combinations: $C(n,k) = \frac{n!}{k!(n-k)!}$</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div class="space-y-2">
+          <p class="font-bold text-slate-700">Deterministic Scoring Formula:</p>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 font-mono text-[11px] text-slate-800">
+            $$S_{DM} = 0.30 \cdot S_{ret} + 0.25 \cdot S_{risk} + 0.25 \cdot S_{div} + 0.10 \cdot S_{group} + 0.10 \cdot S_{dom}$$
+          </div>
+        </div>
+        <div class="space-y-2">
+          <p class="font-bold text-slate-700">Component Definitions:</p>
+          <ul class="list-disc list-inside space-y-1 text-slate-600">
+            <li>$S_{ret}$: Min-max normalized portfolio expected return.</li>
+            <li>$S_{risk}$: Inverted normalized annualized portfolio volatility $\sigma_p = \sqrt{w^T \Sigma w}$.</li>
+            <li>$S_{div}$: Inverted normalized average pairwise correlation.</li>
+            <li>$S_{group}$: Normalized unique chromatic color count.</li>
+            <li>$S_{dom}$: Proportion of constituents belonging to the Pareto-optimal set.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

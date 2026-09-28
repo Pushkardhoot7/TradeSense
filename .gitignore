@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data & Cache
+data/cache/*
+!data/cache/.gitkeep
+
+# Environments & Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# SQLite Database (runtime data — not committed)
+data/tradesense.db
+data/*.db
+
+# Node modules (if React is added later)
+node_modules/
+frontend/dist/
+
+# Build artifacts
+*.egg-info/
+dist/
+build/

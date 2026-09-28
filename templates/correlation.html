@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Correlation Network{% endblock %}
+{% block page_title %}Correlation Analysis{% endblock %}
+{% block page_subtitle %}Pearson Correlation Matrix · Graph G=(V,E) · BFS · DFS · Components{% endblock %}
+
+{% block content %}
+
+<!-- Matrix Heatmap -->
+<div class="section-card mb-6">
+  <h2>📊 Pearson Correlation Matrix — A[i,j]</h2>
+  <p class="section-subtitle">Symmetric matrix: A[i,i]=1, A[i,j]=A[j,i], -1 ≤ A[i,j] ≤ 1</p>
+  <div id="validation-badges" class="flex gap-2 mb-3"></div>
+  <div id="corr-matrix-chart" style="height:480px"></div>
+  <div class="grid grid-cols-3 gap-3 mt-3" id="corr-stats"></div>
+</div>
+
+<!-- Graph -->
+<div class="section-card mb-6">
+  <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
+    <div>
+      <h2>📐 Correlation Network Graph — G=(V, E)</h2>
+      <p class="section-subtitle">Edge (u,v) exists iff |corr(u,v)| ≥ threshold</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <label class="text-xs text-slate-500 font-semibold">Threshold:</label>
+      <input type="range" id="corr-threshold" min="0.50" max="0.90" step="0.05" value="0.60"
+        oninput="updateThreshold(this.value)" class="accent-indigo-600 w-36"/>
+      <span id="threshold-display" class="font-mono text-sm font-semibold text-indigo-700">0.60</span>
+    </div>
+  </div>
+  <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4" id="graph-stats-cards"></div>
+  <div id="corr-network-chart" style="height:500px"></div>
+</div>
+
+<!-- BFS + DFS + Components -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <div class="section-card">
+    <h2>🔍 BFS Traversal (from most-connected stock)</h2>
+    <p class="section-subtitle">Explores neighbours level by level</p>
+    <div class="algo-step" id="bfs-trace"><em class="text-slate-500">Run analysis to see BFS trace</em></div>
+  </div>
+  <div class="section-card">
+    <h2>🔍 DFS Traversal (from most-connected stock)</h2>
+    <p class="section-subtitle">Explores as deep as possible before backtracking</p>
+    <div class="algo-step" id="dfs-trace"><em class="text-slate-500">Run analysis to see DFS trace</em></div>
+  </div>
+</div>
+
+<!-- Connected Components -->
+<div class="section-card mb-6">
+  <h2>🔗 Connected Components</h2>
+  <p class="section-subtitle">Groups of stocks reachable from each other via graph edges</p>
+  <div id="components-list" class="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3"></div>
+</div>
+
+<!-- Explanation -->
+<div class="section-card">
+  <h2>📚 Discrete Mathematics — Correlation Theory</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+    <div class="explanation-box">
+      <div class="ex-label">What is it?</div>
+      <div class="ex-text">The Pearson correlation matrix A is an N×N symmetric real matrix where A[i,j] measures the linear relationship between daily returns of stocks i and j.</div>
+    </div>
+    <div class="explanation-box">
+      <div class="ex-label">Graph Construction Rule</div>
+      <div class="ex-text">We construct G=(V,E) where V = stocks and E = {(i,j) : corr(i,j) ≥ threshold}. No self-loops, no duplicate edges (undirected).</div>
+    </div>
+    <div class="explanation-box">
+      <div class="ex-label">Market Meaning</div>
+      <div class="ex-text">High correlation → stocks move together → they provide less diversification benefit in a portfolio. Isolated nodes (degree 0) are ideal diversifiers.</div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadCorrelation() {
+  try {
+    const data = await TradeSense.apiCall('/api/correlation');
+    const { matrix, tickers, stats, validation } = data;
+
+    // Heatmap
+    if (tickers?.length) TradeSense.renderCorrelationHeatmap('corr-matrix-chart', matrix, tickers);
+
+    // Validation badges
+    const vb = document.getElementById('validation-badges');
+    if (vb && validation) {
+      vb.innerHTML = [
+        ['Symmetric A=Aᵀ', validation.is_symmetric],
+        ['Diagonal A[i,i]=1', validation.is_diagonal_one],
+        ['Bounded [-1,+1]', validation.is_bounded],
+      ].map(([label, ok]) =>
+        `<span class="${ok ? 'badge-positive' : 'badge-negative'}">${ok ? '✓' : '✗'} ${label}</span>`
+      ).join('');
+    }
+
+    // Stats
+    const cs = document.getElementById('corr-stats');
+    if (cs && stats) {
+      cs.innerHTML = [
+        ['Max Correlation', (stats.max_corr || 0).toFixed(4)],
+        ['Min Correlation', (stats.min_corr || 0).toFixed(4)],
+        ['Mean Correlation', (stats.mean_corr || 0).toFixed(4)],
+      ].map(([l,v]) => `<div class="bg-slate-50 rounded-lg p-3 text-center"><div class="text-sm font-bold text-indigo-700">${v}</div><div class="text-xs text-slate-500">${l}</div></div>`).join('');
+    }
+  } catch(e) { console.error(e); }
+}
+
+async function updateThreshold(val) {
+  document.getElementById('threshold-display').textContent = val;
+  try {
+    const data = await TradeSense.apiCall('/api/graph?threshold=' + val);
+    const analysis = TradeSense.currentAnalysis || {};
+    TradeSense.renderNetworkGraph('corr-network-chart', { ...data, coloring_dict: analysis.coloring_dict || {} });
+
+    const s = data.stats || {};
+    const sc = document.getElementById('graph-stats-cards');
+    if (sc) sc.innerHTML = [
+      ['|V| Vertices', s.num_vertices],
+      ['|E| Edges', s.num_edges],
+      ['Avg Degree', (s.avg_degree||0).toFixed(2)],
+      ['Density', (s.density||0).toFixed(4)],
+      ['Components', s.connected_components],
+    ].map(([l,v]) => `<div class="bg-indigo-50 rounded-lg p-3 text-center"><div class="text-lg font-bold text-indigo-700">${v??'—'}</div><div class="text-xs text-slate-500">${l}</div></div>`).join('');
+
+    // BFS trace
+    if (data.bfs?.trace) {
+      document.getElementById('bfs-trace').innerHTML = data.bfs.trace.map(s => `<div class="step-line">${s}</div>`).join('') || '<em>No trace available</em>';
+    }
+    // DFS trace
+    if (data.dfs?.trace) {
+      document.getElementById('dfs-trace').innerHTML = data.dfs.trace.map(s => `<div class="step-line">${s}</div>`).join('') || '<em>No trace available</em>';
+    }
+    // Components
+    const comp = data.connected_components || [];
+    const cl = document.getElementById('components-list');
+    if (cl) cl.innerHTML = comp.map((c, i) =>
+      `<div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+        <div class="text-xs font-semibold text-indigo-600 mb-1">Component ${i+1} (${c.length} stocks)</div>
+        <div class="flex flex-wrap gap-1">${c.map(s => `<span class="font-mono text-xs bg-white border border-slate-200 rounded px-1.5 py-0.5">${s.replace('.NS','')}</span>`).join('')}</div>
+      </div>`
+    ).join('') || '<div class="text-slate-400 text-sm">No components found</div>';
+  } catch(e) { console.error(e); }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadCorrelation();
+  await updateThreshold('0.60');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Sets & Boolean Logic{% endblock %}
+{% block page_title %}Set Theory & Boolean Logic{% endblock %}
+{% block page_subtitle %}A = High Return · B = High Volume · C = Low Risk · AND/OR Screening Truth Table{% endblock %}
+
+{% block content %}
+
+<!-- Set Definitions -->
+<div class="section-card mb-6">
+  <h2>∩ Set Definitions</h2>
+  <p class="section-subtitle">Three sets of stocks defined by financial metrics thresholds</p>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4" id="set-definition-cards">
+    <div class="rounded-xl bg-indigo-50 border-2 border-indigo-200 p-4 text-center">
+      <div class="text-2xl font-bold text-indigo-800 mb-1">A</div>
+      <div class="text-sm font-semibold text-indigo-700">High Return Stocks</div>
+      <div class="text-xs text-slate-500 mt-1">Return% > threshold</div>
+      <div class="text-2xl font-bold text-indigo-900 mt-3" id="set-a-size">—</div>
+      <div class="text-xs text-slate-400">members</div>
+      <div class="flex flex-wrap gap-1 justify-center mt-2" id="set-a-members"></div>
+    </div>
+    <div class="rounded-xl bg-sky-50 border-2 border-sky-200 p-4 text-center">
+      <div class="text-2xl font-bold text-sky-800 mb-1">B</div>
+      <div class="text-sm font-semibold text-sky-700">High Volume Stocks</div>
+      <div class="text-xs text-slate-500 mt-1">Volume > mean(all volumes)</div>
+      <div class="text-2xl font-bold text-sky-900 mt-3" id="set-b-size">—</div>
+      <div class="text-xs text-slate-400">members</div>
+      <div class="flex flex-wrap gap-1 justify-center mt-2" id="set-b-members"></div>
+    </div>
+    <div class="rounded-xl bg-green-50 border-2 border-green-200 p-4 text-center">
+      <div class="text-2xl font-bold text-green-800 mb-1">C</div>
+      <div class="text-sm font-semibold text-green-700">Low Risk Stocks</div>
+      <div class="text-xs text-slate-500 mt-1">Risk% < risk threshold</div>
+      <div class="text-2xl font-bold text-green-900 mt-3" id="set-c-size">—</div>
+      <div class="text-xs text-slate-400">members</div>
+      <div class="flex flex-wrap gap-1 justify-center mt-2" id="set-c-members"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Set Operations -->
+<div class="section-card mb-6">
+  <h2>Set Operations Table</h2>
+  <p class="section-subtitle">All standard operations computed using Python frozenset</p>
+  <div class="overflow-x-auto mt-3">
+    <table class="ts-table" id="set-ops-table">
+      <thead><tr><th>Operation</th><th>Formula</th><th>Result</th><th>Count</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Boolean Logic -->
+<div class="section-card mb-6">
+  <h2>⊤ Boolean Screening Truth Table</h2>
+  <div class="formula-box mb-4">
+    QUALIFIED = (Return &gt; <span id="bool-ret-thresh">?</span>%) AND (Risk &lt; <span id="bool-risk-thresh">?</span>%) AND (Volume &gt; avg)
+  </div>
+  <div class="flex gap-4 mb-4" id="bool-summary-cards"></div>
+  <div class="overflow-x-auto">
+    <table class="ts-table" id="bool-table">
+      <thead>
+        <tr>
+          <th>Stock</th>
+          <th>Return% (value)</th>
+          <th>Return&gt;thresh?</th>
+          <th>Risk% (value)</th>
+          <th>Risk&lt;thresh?</th>
+          <th>Volume (value)</th>
+          <th>Volume&gt;avg?</th>
+          <th>QUALIFIED</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- DM Application -->
+<div class="section-card mb-6">
+  <h2>🔗 Application in TradeSense DM Pipeline</h2>
+  <div class="explanation-box">
+    <div class="ex-label">How Sets Feed the DM Score</div>
+    <div class="ex-text">
+      The set A∩B∩C (High Return AND High Volume AND Low Risk) represents the "ideal" stock candidates.
+      These qualified stocks are prioritised when building the candidate pool for C(n,k) portfolio generation.
+      Boolean logic thus acts as a <strong>filter gate</strong> before combinatorial generation.
+    </div>
+  </div>
+</div>
+
+<!-- Explanation -->
+<div class="section-card">
+  <h2>📚 Set Theory & Boolean Logic</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+    <div class="explanation-box"><div class="ex-label">Set Theory</div><div class="ex-text">Sets group stocks sharing a property. Union, intersection, and difference identify overlapping and exclusive pools. The universal set U = all analyzed stocks.</div></div>
+    <div class="explanation-box"><div class="ex-label">Boolean Algebra</div><div class="ex-text">Each condition (Return>thresh, Risk&lt;thresh, Volume>avg) is a Boolean variable T/F. The final qualification is the logical AND of all three propositions.</div></div>
+    <div class="explanation-box"><div class="ex-label">Truth Table</div><div class="ex-text">A truth table enumerates all possible combinations of input conditions and their logical output. Here the inputs are financial screening conditions.</div></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function renderMember(symbol, colorClass) {
+  return `<span class="font-mono text-xs ${colorClass} rounded px-1.5 py-0.5">${symbol.replace('.NS','')}</span>`;
+}
+
+async function loadSets() {
+  try {
+    const [setsData, boolData] = await Promise.all([
+      TradeSense.apiCall('/api/sets'),
+      TradeSense.apiCall('/api/boolean'),
+    ]);
+
+    // Set size and members
+    const setDefs = [['A', 'a', 'indigo'], ['B', 'b', 'sky'], ['C', 'c', 'green']];
+    setDefs.forEach(([key, suffix, color]) => {
+      const s = setsData[key] || {};
+      const el = document.getElementById(`set-${suffix}-size`);
+      if (el) el.textContent = s.size ?? '—';
+      const mem = document.getElementById(`set-${suffix}-members`);
+      if (mem) mem.innerHTML = (s.members || []).map(m => renderMember(m, `bg-${color}-100 text-${color}-800`)).join('');
+    });
+
+    // Set ops table
+    const ops = [
+      ['A ∪ B', 'A_union_B'], ['A ∩ B', 'A_inter_B'], ['A ∩ C', 'A_inter_C'],
+      ['B ∩ C', 'B_inter_C'], ['A ∩ B ∩ C', 'A_inter_B_inter_C'],
+      ['A − B', 'A_minus_B'], ['B − A', 'B_minus_A'],
+      ['(A ∪ B) ∩ C', 'A_union_B_inter_C'], ['A ∪ B ∪ C', 'A_union_B_union_C'],
+    ];
+    const tbody = document.querySelector('#set-ops-table tbody');
+    if (tbody) tbody.innerHTML = ops.map(([label, key]) => {
+      const s = setsData[key] || { members: [], size: 0, formula: label };
+      return `<tr>
+        <td class="font-semibold">${label}</td>
+        <td class="font-mono text-xs text-indigo-700">${s.formula || label}</td>
+        <td class="font-mono text-xs">${(s.members || []).map(m => m.replace('.NS','')).join(', ') || '∅'}</td>
+        <td class="font-bold text-center">${s.size ?? 0}</td>
+      </tr>`;
+    }).join('');
+
+    // Boolean table
+    const rows = boolData.rows || [];
+    document.getElementById('bool-ret-thresh').textContent = boolData.return_threshold ?? '?';
+    document.getElementById('bool-risk-thresh').textContent = boolData.risk_threshold ?? '?';
+
+    const sc = document.getElementById('bool-summary-cards');
+    if (sc) sc.innerHTML = [
+      ['Qualified', boolData.qualified_count, 'badge-positive'],
+      ['Disqualified', (boolData.total_count || 0) - (boolData.qualified_count || 0), 'badge-negative'],
+      ['Total', boolData.total_count, 'badge-neutral'],
+    ].map(([l,v,c]) => `<div class="flex items-center gap-2 px-4 py-2 rounded-lg border ${c === 'badge-positive' ? 'bg-green-50 border-green-200' : c === 'badge-negative' ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'}">
+      <span class="font-bold text-lg">${v ?? '—'}</span>
+      <span class="text-xs text-slate-600">${l}</span>
+    </div>`).join('');
+
+    const btbody = document.querySelector('#bool-table tbody');
+    if (btbody) btbody.innerHTML = rows.map(row => {
+      const q = row.final_result;
+      const bool = (v) => v ? `<span class="badge-positive">T</span>` : `<span class="badge-negative">F</span>`;
+      return `<tr class="${q ? 'bg-green-50' : ''}">
+        <td class="font-mono font-semibold ${q ? 'text-green-700' : 'text-slate-600'}">${row.symbol?.replace('.NS','')}</td>
+        <td class="font-mono">${row.return_value?.toFixed(2) ?? '—'}%</td>
+        <td>${bool(row.return_condition)}</td>
+        <td class="font-mono">${row.risk_value?.toFixed(2) ?? '—'}%</td>
+        <td>${bool(row.risk_condition)}</td>
+        <td class="font-mono text-xs">${row.volume_value?.toLocaleString() ?? '—'}</td>
+        <td>${bool(row.volume_condition)}</td>
+        <td>${q ? '<span class="badge-positive font-bold">✓ QUALIFIED</span>' : '<span class="badge-negative">✗ NOT QUALIFIED</span>'}</td>
+      </tr>`;
+    }).join('');
+
+  } catch(e) { console.error(e); }
+}
+
+document.addEventListener('DOMContentLoaded', loadSets);
+</script>
+{% endblock %}

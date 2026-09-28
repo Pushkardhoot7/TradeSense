@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Hasse & Ranking — Partially Ordered Sets{% endblock %}
+{% block page_title %}📐 Hasse & Ranking (Poset Theory){% endblock %}
+{% block page_subtitle %}Discovering Pareto dominance, transitive reduction, and topological hierarchy ranking{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Mathematical Properties Verification Banner -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200 space-y-1">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] font-bold uppercase text-slate-400">Reflexive</span>
+        <span id="prop-refl-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ Valid</span>
+      </div>
+      <div class="text-xs font-bold text-slate-800">A ≽ A holds ∀ A</div>
+      <div class="text-[11px] text-slate-500">Every stock matches its own metrics.</div>
+    </div>
+
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200 space-y-1">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] font-bold uppercase text-slate-400">Antisymmetric</span>
+        <span id="prop-anti-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ Valid</span>
+      </div>
+      <div class="text-xs font-bold text-slate-800">A ≽ B ∧ B ≽ A ⇒ A = B</div>
+      <div class="text-[11px] text-slate-500">No cyclic dominance (up to ties).</div>
+    </div>
+
+    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200 space-y-1">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] font-bold uppercase text-slate-400">Transitive</span>
+        <span id="prop-trans-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ Valid</span>
+      </div>
+      <div class="text-xs font-bold text-slate-800">A ≽ B ∧ B ≽ C ⇒ A ≽ C</div>
+      <div class="text-[11px] text-slate-500">Guarantees consistent ranking hierarchy.</div>
+    </div>
+
+    <div class="kpi-card p-4 rounded-xl bg-indigo-900 text-white border border-indigo-800 space-y-1">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] font-bold uppercase text-indigo-300">Poset Verdict</span>
+        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-400 text-slate-950 font-mono">POSET TRUE</span>
+      </div>
+      <div class="text-xs font-bold text-white">Partially Ordered Set</div>
+      <div class="text-[11px] text-indigo-200">Enables Transitive Reduction DAG.</div>
+    </div>
+  </div>
+
+  <!-- Hasse Diagram & Dominance Pairs Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- Hasse Diagram Visualization (8 cols) -->
+    <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Hasse Diagram (Transitive Reduction DAG)</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Top level nodes are Maximal (Non-dominated). Edges flow downward from dominator to dominated.</p>
+        </div>
+      </div>
+
+      <!-- Plotly Hasse Diagram Container -->
+      <div id="hasse-plot" class="w-full h-[520px] rounded-xl overflow-hidden">
+        <div class="flex items-center justify-center h-full text-slate-400 text-xs">
+          <span class="animate-spin mr-2">⚙️</span> Computing Transitive Reduction & Hasse DAG...
+        </div>
+      </div>
+    </div>
+
+    <!-- Poset Tiers & Dominance Pairs (4 cols) -->
+    <div class="lg:col-span-4 space-y-6">
+
+      <!-- Maximal & Minimal Tiers Card -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-100 pb-2.5">
+          Poset Structural Elements
+        </h4>
+
+        <div class="space-y-3">
+          <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 space-y-1">
+            <div class="text-[10px] font-bold uppercase text-emerald-800 flex items-center gap-1">
+              <span>👑</span> Maximal Elements (Pareto Optimal)
+            </div>
+            <div id="maximal-list" class="text-xs font-mono font-bold text-emerald-950">Loading...</div>
+            <p class="text-[10px] text-emerald-800/80">No stock beats these in both return & risk.</p>
+          </div>
+
+          <div class="p-3 bg-rose-50 rounded-xl border border-rose-200 space-y-1">
+            <div class="text-[10px] font-bold uppercase text-rose-800 flex items-center gap-1">
+              <span>⚠️</span> Minimal Elements (Bottom Tier)
+            </div>
+            <div id="minimal-list" class="text-xs font-mono font-bold text-rose-950">Loading...</div>
+            <p class="text-[10px] text-rose-800/80">Dominated by higher level assets.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verified Dominance Relations -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Dominance Pairs</h4>
+          <span id="pairs-count-badge" class="text-[10px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+            Cover Edges
+          </span>
+        </div>
+
+        <div id="hasse-pairs-list" class="space-y-2 text-xs max-h-56 overflow-y-auto">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadHassePage() {
+  try {
+    const hasseRes = await TradeSense.apiCall('/api/hasse');
+    const relationRes = await TradeSense.apiCall('/api/relation');
+
+    // Poset Props
+    const poset = relationRes?.poset || {};
+    if (poset.is_reflexive !== undefined) {
+      document.getElementById('prop-refl-badge').textContent = poset.is_reflexive ? '✓ Valid' : '✗ Viol';
+    }
+    if (poset.is_antisymmetric !== undefined) {
+      document.getElementById('prop-anti-badge').textContent = poset.is_antisymmetric ? '✓ Valid' : '✗ Viol';
+    }
+    if (poset.is_transitive !== undefined) {
+      document.getElementById('prop-trans-badge').textContent = poset.is_transitive ? '✓ Valid' : '✗ Viol';
+    }
+
+    // Maximal & Minimal
+    const maximal = hasseRes?.maximal_elements || relationRes?.maximal_elements || [];
+    const minimal = hasseRes?.minimal_elements || relationRes?.minimal_elements || [];
+    document.getElementById('maximal-list').textContent = maximal.join(', ') || 'None';
+    document.getElementById('minimal-list').textContent = minimal.join(', ') || 'None';
+
+    // Render Hasse Diagram
+    TradeSense.renderHasseDiagram('hasse-plot', hasseRes);
+
+    // Render Cover Pairs
+    const pairs = hasseRes?.cover_relation || relationRes?.dominance_pairs || [];
+    const container = document.getElementById('hasse-pairs-list');
+    if (container) {
+      container.innerHTML = pairs.map(p => {
+        const u = Array.isArray(p) ? p[0] : (p.dominator || p.from);
+        const v = Array.isArray(p) ? p[1] : (p.dominated || p.to);
+        return `
+          <div class="p-2 bg-slate-50 rounded-lg border border-slate-200 flex justify-between items-center font-mono">
+            <span class="font-bold text-indigo-600">${u}</span>
+            <span class="text-slate-400 text-[10px]">≽ dominates ≽</span>
+            <span class="font-bold text-slate-700">${v}</span>
+          </div>
+        `;
+      }).join('');
+    }
+  } catch(e) {
+    console.error("Hasse page error:", e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadHassePage);
+</script>
+{% endblock %}

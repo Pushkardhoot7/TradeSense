@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Backtesting & Scenario Analysis{% endblock %}
+{% block page_title %}📈 Portfolio Backtesting & What-If Stress Testing{% endblock %}
+{% block page_subtitle %}Simulate historical equity growth, risk-adjusted ratios, and macroeconomic stress scenarios{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header Banner -->
+  <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 border border-slate-800 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div class="space-y-1 max-w-2xl">
+      <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold border border-emerald-500/30">
+        <span>⚡</span> Quantitative Risk Simulation
+      </div>
+      <h2 class="text-xl sm:text-2xl font-black">Historical Equity Curve & Shock Testing</h2>
+      <p class="text-xs sm:text-sm text-slate-300">
+        Verify how discrete-mathematics-selected portfolios would have performed under real market conditions compared to the NIFTY benchmark.
+      </p>
+    </div>
+  </div>
+
+  <!-- Interactive Control Strip -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3 flex-wrap flex-1">
+      <div class="flex items-center gap-2">
+        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Portfolio:</label>
+        <select id="bt-portfolio-select" onchange="runBacktest()" class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-indigo-600">
+          <option value="TCS.NS,HDFCBANK.NS,RELIANCE.NS" selected>Rank #1: TCS + HDFC Bank + Reliance</option>
+          <option value="INFY.NS,ICICIBANK.NS,TATAMOTORS.NS">Rank #2: Infosys + ICICI Bank + Tata Motors</option>
+          <option value="WIPRO.NS,KOTAKBANK.NS,BAJFINANCE.NS">Rank #3: Wipro + Kotak Bank + Bajaj Finance</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Period:</label>
+        <select id="bt-period-select" onchange="runBacktest()" class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-indigo-600">
+          <option value="6mo">6 Months</option>
+          <option value="1y" selected>1 Year</option>
+          <option value="2y">2 Years</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Initial Capital:</label>
+        <span class="text-xs font-mono font-bold text-slate-800 bg-slate-100 px-2 py-1 rounded">₹1,00,000</span>
+      </div>
+    </div>
+
+    <button onclick="runBacktest()" id="bt-run-btn" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5">
+      <span>🚀</span> Run Backtest
+    </button>
+  </div>
+
+  <!-- Backtest KPI Cards -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div class="p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Total Return</div>
+      <div id="bt-total-ret" class="text-xl font-black text-emerald-600 mt-1 font-mono">+18.5%</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Absolute Growth</div>
+    </div>
+    <div class="p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">CAGR %</div>
+      <div id="bt-cagr" class="text-xl font-black text-indigo-600 mt-1 font-mono">18.5%</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Annualized Rate</div>
+    </div>
+    <div class="p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Annual Volatility</div>
+      <div id="bt-vol" class="text-xl font-black text-slate-800 mt-1 font-mono">14.2%</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Risk Std Dev (σ)</div>
+    </div>
+    <div class="p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Sortino Ratio</div>
+      <div id="bt-sortino" class="text-xl font-black text-emerald-600 mt-1 font-mono">1.82</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Downside Adjusted</div>
+    </div>
+    <div class="p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Max Drawdown</div>
+      <div id="bt-maxdd" class="text-xl font-black text-rose-600 mt-1 font-mono">-9.4%</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Peak-to-Trough</div>
+    </div>
+    <div class="p-4 rounded-xl bg-white border border-slate-200">
+      <div class="text-[10px] font-bold uppercase text-slate-400">Daily VaR (95%)</div>
+      <div id="bt-var" class="text-xl font-black text-amber-600 mt-1 font-mono">1.65%</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Value at Risk</div>
+    </div>
+  </div>
+
+  <!-- Equity Curve Chart -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+    <div class="flex items-center justify-between flex-wrap gap-2">
+      <div>
+        <h3 class="text-sm font-bold text-slate-900">Portfolio Equity Curve Growth (₹1,00,000 Starting Capital)</h3>
+        <p class="text-xs text-slate-500">Compounded value across historical trading days</p>
+      </div>
+      <span class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">Equal-Weighted Strategy</span>
+    </div>
+    <div id="bt-equity-chart" class="w-full h-[360px] rounded-xl overflow-hidden bg-slate-50"></div>
+  </div>
+
+  <!-- What-If Stress Scenarios Table -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+      <div class="flex items-center gap-2">
+        <span class="text-base">🌪️</span>
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">What-If Macro & Sector Shock Stress Test</h3>
+          <p class="text-[11px] text-slate-500">Estimates portfolio capital loss under sudden systematic market perturbations</p>
+        </div>
+      </div>
+      <span class="text-[10px] font-bold text-slate-400 font-mono">Factor Exposure Model</span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs font-sans">
+        <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-200">
+          <tr>
+            <th class="py-2.5 px-3">Stress Scenario</th>
+            <th class="py-2.5 px-3">Scope</th>
+            <th class="py-2.5 px-3 text-right">Base Shock</th>
+            <th class="py-2.5 px-3 text-right">Estimated Portfolio Impact</th>
+            <th class="py-2.5 px-3">Asset Sensitivity Summary</th>
+          </tr>
+        </thead>
+        <tbody id="bt-scenario-tbody" class="divide-y divide-slate-100 font-mono">
+          <!-- Populated via JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function runBacktest() {
+  const btn = document.getElementById('bt-run-btn');
+  if (btn) btn.innerHTML = '<span class="animate-spin">⚙️</span> Simulating...';
+
+  try {
+    const rawSymbols = document.getElementById('bt-portfolio-select')?.value || "TCS.NS,HDFCBANK.NS,RELIANCE.NS";
+    const period = document.getElementById('bt-period-select')?.value || "1y";
+    const symbols = rawSymbols.split(',').map(s => s.trim());
+
+    const [btRes, scRes] = await Promise.all([
+      TradeSense.apiCall('/api/portfolio/backtest', 'POST', { symbols: symbols, period: period, initial_capital: 100000 }),
+      TradeSense.apiCall('/api/portfolio/scenario', 'POST', { symbols: symbols })
+    ]);
+
+    if (btRes && !btRes.error) {
+      document.getElementById('bt-total-ret').textContent = (btRes.total_return_pct >= 0 ? '+' : '') + btRes.total_return_pct.toFixed(1) + '%';
+      document.getElementById('bt-total-ret').className = `text-xl font-black ${btRes.total_return_pct >= 0 ? 'text-emerald-600' : 'text-rose-600'} mt-1 font-mono`;
+      document.getElementById('bt-cagr').textContent = (btRes.cagr_pct || 0).toFixed(1) + '%';
+      document.getElementById('bt-vol').textContent = (btRes.annualized_volatility_pct || 0).toFixed(1) + '%';
+      document.getElementById('bt-sortino').textContent = (btRes.sortino_ratio || 0).toFixed(2);
+      document.getElementById('bt-maxdd').textContent = '-' + (btRes.max_drawdown_pct || 0).toFixed(1) + '%';
+      document.getElementById('bt-var').textContent = (btRes.var_95_daily_pct || 0).toFixed(2) + '%';
+
+      // Render Equity Chart
+      if (btRes.dates && btRes.equity_curve) {
+        const trace = {
+          x: btRes.dates,
+          y: btRes.equity_curve,
+          type: 'scatter',
+          mode: 'lines',
+          name: 'Portfolio Equity',
+          line: { color: '#4f46e5', width: 2.5 },
+          fill: 'tozeroy',
+          fillcolor: 'rgba(79, 70, 229, 0.06)'
+        };
+        const layout = {
+          margin: { t: 20, r: 20, l: 60, b: 35 },
+          paper_bgcolor: 'transparent',
+          plot_bgcolor: 'transparent',
+          xaxis: { showgrid: true, gridcolor: '#f1f5f9', tickfont: { size: 10 } },
+          yaxis: { showgrid: true, gridcolor: '#f1f5f9', tickfont: { size: 10 }, tickprefix: '₹' },
+          hovermode: 'x unified'
+        };
+        Plotly.newPlot('bt-equity-chart', [trace], layout, { responsive: true, displayModeBar: false });
+      }
+    }
+
+    // Render Stress Scenarios
+    const tbody = document.getElementById('bt-scenario-tbody');
+    if (tbody && scRes && scRes.scenarios) {
+      tbody.innerHTML = scRes.scenarios.map(sc => {
+        const isLoss = sc.estimated_portfolio_impact_pct < 0;
+        return `
+          <tr class="hover:bg-slate-50/80 transition-colors">
+            <td class="py-2.5 px-3 font-bold font-sans text-slate-800">${sc.scenario}</td>
+            <td class="py-2.5 px-3 font-sans text-slate-500 uppercase text-[10px]">${sc.scope}</td>
+            <td class="py-2.5 px-3 text-right text-slate-600 font-bold">${sc.base_shock_pct > 0 ? '+' : ''}${sc.base_shock_pct}%</td>
+            <td class="py-2.5 px-3 text-right font-black ${isLoss ? 'text-rose-600' : 'text-emerald-600'}">
+              ${sc.estimated_portfolio_impact_pct > 0 ? '+' : ''}${sc.estimated_portfolio_impact_pct.toFixed(2)}%
+            </td>
+            <td class="py-2.5 px-3 font-sans text-slate-500 text-[11px]">
+              ${(sc.asset_breakdown || []).map(a => `${a.symbol}: ${a.contribution_pct > 0 ? '+' : ''}${a.contribution_pct}%`).join(', ')}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+  } catch(e) {
+    console.error("Backtest error:", e);
+  } finally {
+    if (btn) btn.innerHTML = '<span>🚀</span> Run Backtest';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', runBacktest);
+</script>
+{% endblock %}

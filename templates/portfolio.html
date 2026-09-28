@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Portfolio Optimizer{% endblock %}
+{% block page_title %}Portfolio Optimizer — DM Score Engine{% endblock %}
+{% block page_subtitle %}C(n,k) Combinatorial Generation · 5-Component DM Score · Top 3 Rankings{% endblock %}
+
+{% block content %}
+
+<!-- DM Score Formula -->
+<div class="section-card mb-6">
+  <h2>🏆 DM Score Formula</h2>
+  <p class="section-subtitle">Composite scoring across 5 discrete-math and financial dimensions</p>
+  <div class="formula-box my-4">
+    DM Score = 0.30×Return_Score + 0.25×Risk_Score + 0.25×Diversification_Score + 0.10×Group_Score + 0.10×Dominance_Score
+  </div>
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center"><div class="font-bold text-blue-800 text-lg">30%</div><div class="text-xs text-slate-500 mt-1">Return Score</div></div>
+    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-center"><div class="font-bold text-red-800 text-lg">25%</div><div class="text-xs text-slate-500 mt-1">Risk Score</div></div>
+    <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-center"><div class="font-bold text-green-800 text-lg">25%</div><div class="text-xs text-slate-500 mt-1">Diversification</div></div>
+    <div class="bg-purple-50 border border-purple-200 rounded-lg p-3 text-center"><div class="font-bold text-purple-800 text-lg">10%</div><div class="text-xs text-slate-500 mt-1">Group Diversity</div></div>
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center"><div class="font-bold text-amber-800 text-lg">10%</div><div class="text-xs text-slate-500 mt-1">Dominance</div></div>
+  </div>
+</div>
+
+<!-- Combinatorics Summary -->
+<div class="section-card mb-6">
+  <h2>C(n,k) Combinatorial Portfolio Generation</h2>
+  <p class="section-subtitle">Number of portfolio candidates from the eligible stock pool</p>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4" id="combo-summary"></div>
+</div>
+
+<!-- Top 3 Portfolio Cards -->
+<div class="section-card mb-6">
+  <h2>🥇 Top 3 Portfolios by DM Score</h2>
+  <p class="section-subtitle">Ranked descending by DM Score. Tiebreaker: Return Score → Risk Score → Insertion Index</p>
+  <div id="top-portfolio-cards" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+    <div class="text-slate-400 text-sm text-center col-span-3 py-8">Loading...</div>
+  </div>
+  <div class="disclaimer-box mt-4">
+    ⚠️ DM Score is a project-defined mathematical analytical metric, not investment advice. Numbers are computed from demo/historical data for educational purposes.
+  </div>
+</div>
+
+<!-- Radar Chart Comparison -->
+<div class="section-card mb-6">
+  <h2>📡 Portfolio #1 — Component Radar</h2>
+  <p class="section-subtitle">All 5 score components of the top-ranked portfolio</p>
+  <div id="radar-chart" style="height:400px"></div>
+</div>
+
+<!-- All Portfolios Table -->
+<div class="section-card">
+  <div class="flex items-center justify-between mb-3">
+    <div><h2>All Scored Portfolios</h2><p class="section-subtitle">Sorted by DM Score descending. Shows top 50.</p></div>
+    <input type="text" id="portfolio-search" placeholder="Search stocks..."
+      oninput="filterPortfolios(this.value)"
+      class="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 outline-none"/>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="ts-table" id="all-portfolios-table">
+      <thead><tr>
+        <th>Rank</th><th>Portfolio</th><th>DM Score</th>
+        <th>Return</th><th>Risk</th><th>Diversification</th><th>Group</th><th>Dominance</th>
+      </tr></thead>
+      <tbody id="all-portfolios-body"></tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let allPortfoliosData = [];
+
+async function loadPortfolios() {
+  try {
+    const [topResp, allResp, analysis] = await Promise.all([
+      TradeSense.apiCall('/api/portfolios/top?n=3'),
+      TradeSense.apiCall('/api/portfolios?limit=50'),
+      TradeSense.apiCall('/api/market/overview'),
+    ]);
+
+    // Combinatorics summary
+    const r = TradeSense.currentAnalysis || {};
+    const combo = r.combinatorics || {};
+    const sc = document.getElementById('combo-summary');
+    if (sc) sc.innerHTML = [
+      ['n (pool size)', combo.n ?? '—'],
+      ['k (portfolio size)', combo.k ?? '—'],
+      ['C(n,k) formula', combo.candidates_display ?? '—'],
+      ['Evaluated', combo.evaluated ?? allResp.total ?? '—'],
+    ].map(([l,v]) => `<div class="bg-indigo-50 rounded-lg p-4 text-center"><div class="text-xl font-bold text-indigo-700">${v}</div><div class="text-xs text-slate-500 mt-1">${l}</div></div>`).join('');
+
+    // Top portfolio cards
+    const tops = topResp.top_portfolios || [];
+    TradeSense.renderPortfolioCards(tops, 'top-portfolio-cards');
+
+    // Radar for top portfolio
+    if (tops.length) TradeSense.renderPortfolioRadar('radar-chart', tops[0]);
+
+    // All portfolios table
+    allPortfoliosData = allResp.portfolios || [];
+    renderTable(allPortfoliosData);
+
+  } catch(e) { console.error(e); }
+}
+
+function renderTable(data) {
+  const tbody = document.getElementById('all-portfolios-body');
+  if (!tbody) return;
+  const medals = ['🥇','🥈','🥉'];
+  tbody.innerHTML = data.slice(0, 50).map((p, i) => {
+    const rank = p.rank ?? (i + 1);
+    const medal = rank <= 3 ? medals[rank-1] + ' ' : '';
+    return `<tr class="${rank <= 3 ? 'bg-amber-50/50' : ''}">
+      <td class="font-mono font-bold">${medal}${rank}</td>
+      <td class="font-mono text-xs">${(p.portfolio||[]).map(s=>s.replace('.NS','')).join(', ')}</td>
+      <td class="font-bold text-indigo-700">${p.dm_score?.toFixed(2) ?? '—'}</td>
+      <td>${p.return_score?.toFixed(1) ?? '—'}</td>
+      <td>${p.risk_score?.toFixed(1) ?? '—'}</td>
+      <td>${p.diversification_score?.toFixed(1) ?? '—'}</td>
+      <td>${p.group_score?.toFixed(1) ?? '—'}</td>
+      <td>${p.dominance_score?.toFixed(1) ?? '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterPortfolios(q) {
+  q = q.toLowerCase();
+  const filtered = allPortfoliosData.filter(p =>
+    (p.portfolio || []).some(s => s.toLowerCase().replace('.ns','').includes(q))
+  );
+  renderTable(filtered);
+}
+
+document.addEventListener('DOMContentLoaded', loadPortfolios);
+</script>
+{% endblock %}
