@@ -27,17 +27,48 @@ def get_stock_technicals(symbol: str, period: str = "6mo"):
     try:
         df = yf.download(symbol, period=period, progress=False)
         if df.empty:
-            raise HTTPException(status_code=404, detail=f"No price data available for {symbol}")
+            return {
+                "symbol": symbol,
+                "period": period,
+                "status": "unavailable",
+                "message": "Unavailable with current data source",
+                "latest": {
+                    "close": None,
+                    "sma20": None, "sma50": None, "sma200": None,
+                    "ema20": None, "ema50": None,
+                    "rsi": None, "rsi_condition": "Unavailable with current data source",
+                    "macd": None, "macd_signal": None, "macd_hist": None,
+                    "bb_upper": None, "bb_mid": None, "bb_lower": None,
+                    "atr": None, "vwap": None,
+                },
+                "series": {"dates": [], "close": []},
+                "disclaimer": "Technical indicators are descriptive historical calculations."
+            }
         technicals = compute_all_technicals(df)
         technicals["symbol"] = symbol
         technicals["period"] = period
+        technicals["status"] = "available"
         _tech_cache[cache_key] = (now, technicals)
         return technicals
-    except HTTPException:
-        raise
     except Exception as exc:
         logger.error("Error computing technicals for %s: %s", symbol, exc)
-        raise HTTPException(status_code=500, detail=f"Could not compute technical indicators: {exc}")
+        return {
+            "symbol": symbol,
+            "period": period,
+            "status": "unavailable",
+            "message": "Unavailable with current data source",
+            "latest": {
+                "close": None,
+                "sma20": None, "sma50": None, "sma200": None,
+                "ema20": None, "ema50": None,
+                "rsi": None, "rsi_condition": "Unavailable with current data source",
+                "macd": None, "macd_signal": None, "macd_hist": None,
+                "bb_upper": None, "bb_mid": None, "bb_lower": None,
+                "atr": None, "vwap": None,
+            },
+            "series": {"dates": [], "close": []},
+            "disclaimer": "Technical indicators are descriptive historical calculations."
+        }
 
 @router.get("/{symbol}/fundamentals")
 def get_stock_fundamentals(symbol: str):

@@ -1,14 +1,12 @@
 """
-scoring.py - DM Portfolio Score Engine for TradeSense V2
-=========================================================
+scoring.py - DM Portfolio Score Engine for TradeSense V2.1
+===========================================================
 Implements the 5-component DM Score formula deterministically.
-Fixes the KeyError: 'portfolio' bug — every output dict ALWAYS contains
-'portfolio' as a list[str].
 
-Formula
--------
-DM Score = 0.30×Return + 0.25×Risk + 0.25×Diversification
-         + 0.10×Group_Diversity + 0.10×Dominance
+Formula (Updated V2.1 Weights)
+-------------------------------
+DM Score = 0.30×Return + 0.25×Risk + 0.20×Diversification
+         + 0.15×Stability + 0.10×Network_Independence
 
 All components normalised to [0, 100] via min-max over the candidate pool.
 """
@@ -24,18 +22,18 @@ from backend.core.portfolio import evaluate_portfolio
 
 
 DM_WEIGHTS: dict[str, float] = {
-    "return":        0.30,
-    "risk":          0.25,
-    "diversification": 0.25,
-    "group_diversity": 0.10,
-    "dominance":     0.10,
+    "return":              0.30,
+    "risk":                0.25,
+    "diversification":     0.20,
+    "stability":           0.15,
+    "network_independence": 0.10,
 }
 
 DISCLAIMER = (
     "DM Score is a project-defined mathematical analytical score. "
     "It is NOT a guaranteed best portfolio — it reflects a specific, "
-    "documented weighting of return, risk, diversification, and dominance "
-    "characteristics and should be interpreted accordingly."
+    "documented weighting of return, risk, diversification, stability, "
+    "and network independence characteristics and should be interpreted accordingly."
 )
 
 
@@ -44,6 +42,30 @@ def _minmax(value: float, lo: float, hi: float, invert: bool = False) -> float:
         return 100.0
     norm = 100.0 * (value - lo) / (hi - lo)
     return round(max(0.0, min(100.0, 100.0 - norm if invert else norm)), 4)
+
+
+def _compute_stability(symbols: tuple[str, ...], returns_df: pd.DataFrame) -> float:
+    """
+    Compute return stability for a portfolio.
+    Higher stability = more consistent returns (lower coefficient of variation).
+    Returns a raw value (lower = more stable, will be inverted during scoring).
+    """
+    if returns_df is None or returns_df.empty:
+        return 50.0  # neutral default
+    valid_cols = [s for s in symbols if s in returns_df.columns]
+    if not valid_cols:
+        return 50.0
+    # Equal-weight portfolio daily returns
+    port_returns = returns_df[valid_cols].mean(axis=1).dropna()
+    if len(port_returns) < 10:
+        return 50.0
+    # Coefficient of variation of rolling 20-day returns (lower = more stable)
+    rolling_mean = port_returns.rolling(20).mean().dropna()
+    rolling_std = port_returns.rolling(20).std().dropna()
+    if len(rolling_mean) == 0 or rolling_mean.abs().mean() < 1e-10:
+        return 50.0
+    cv = float(rolling_std.mean() / max(rolling_mean.abs().mean(), 1e-10))
+    return cv
 
 
 def run_scoring_pipeline(
@@ -97,6 +119,7 @@ def run_scoring_pipeline(
 
         colors_in_portfolio = {coloring.get(s, -1) for s in p}
         dom_count = sum(1 for s in p if s in non_dominated)
+        stability_cv = _compute_stability(p, returns_df)
 
         raw.append({
             "insertion_idx":    idx,
@@ -107,6 +130,7 @@ def run_scoring_pipeline(
             "avg_correlation":  ev["avg_correlation"],
             "distinct_groups":  len(colors_in_portfolio),
             "dom_count":        dom_count,
+            "stability_cv":     stability_cv,
         })
 
     if not raw:
@@ -118,8 +142,10 @@ def run_scoring_pipeline(
     # ------------------------------------------------------------------
     all_ret  = [r["raw_return"] for r in raw]
     all_risk = [r["raw_risk"]   for r in raw]
+    all_stab = [r["stability_cv"] for r in raw]
     min_ret, max_ret   = min(all_ret),  max(all_ret)
     min_risk, max_risk = min(all_risk), max(all_risk)
+    min_stab, max_stab = min(all_stab), max(all_stab)
 
     # ------------------------------------------------------------------
     # Step 3 — Compute component scores & DM Score
@@ -135,19 +161,20 @@ def run_scoring_pipeline(
         corr_clamped = max(-1.0, min(1.0, r["avg_correlation"]))
         div_score = max(0.0, min(100.0, 100.0 * (1.0 - corr_clamped) / 2.0))
 
-        max_possible_groups = min(k, total_color_groups)
-        grp_score = 100.0 * r["distinct_groups"] / max_possible_groups if max_possible_groups > 0 else 100.0
-        grp_score = max(0.0, min(100.0, grp_score))
+        # Stability: lower CV → higher stability score (inverted)
+        stab_score = _minmax(r["stability_cv"], min_stab, max_stab, invert=True)
 
-        dom_score = 100.0 * r["dom_count"] / k if k > 0 else 0.0
-        dom_score = max(0.0, min(100.0, dom_score))
+        # Network Independence: how many distinct color groups the portfolio spans
+        max_possible_groups = min(k, total_color_groups)
+        net_score = 100.0 * r["distinct_groups"] / max_possible_groups if max_possible_groups > 0 else 100.0
+        net_score = max(0.0, min(100.0, net_score))
 
         dm = (
-            DM_WEIGHTS["return"]          * ret_score
-            + DM_WEIGHTS["risk"]          * risk_score
-            + DM_WEIGHTS["diversification"] * div_score
-            + DM_WEIGHTS["group_diversity"] * grp_score
-            + DM_WEIGHTS["dominance"]     * dom_score
+            DM_WEIGHTS["return"]               * ret_score
+            + DM_WEIGHTS["risk"]               * risk_score
+            + DM_WEIGHTS["diversification"]    * div_score
+            + DM_WEIGHTS["stability"]          * stab_score
+            + DM_WEIGHTS["network_independence"] * net_score
         )
 
         scored.append({
@@ -157,8 +184,11 @@ def run_scoring_pipeline(
             "return_score":          round(ret_score, 2),
             "risk_score":            round(risk_score, 2),
             "diversification_score": round(div_score, 2),
-            "group_score":           round(grp_score, 2),
-            "dominance_score":       round(dom_score, 2),
+            "stability_score":       round(stab_score, 2),
+            "network_score":         round(net_score, 2),
+            # Keep legacy keys for backward compatibility
+            "group_score":           round(net_score, 2),
+            "dominance_score":       round(stab_score, 2),
             "raw_return":            round(r["raw_return"], 4),
             "raw_risk":              round(r["raw_risk"], 4),
             "avg_correlation":       round(r["avg_correlation"], 4),

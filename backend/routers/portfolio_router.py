@@ -63,3 +63,40 @@ def compare_portfolios(req: CompareRequest):
     a = evaluate_portfolio(tuple(req.portfolio_a), metrics, returns_df, corr_df)
     b = evaluate_portfolio(tuple(req.portfolio_b), metrics, returns_df, corr_df)
     return {"portfolio_a": a, "portfolio_b": b}
+
+
+@router.get("/portfolios/for-stock/{symbol}")
+def portfolios_for_stock(symbol: str, limit: int = 5):
+    """Return top ranked portfolios that contain the specified stock."""
+    r = _ensure_result()
+    all_p = r.get("all_portfolios", [])
+    matching = [dict(p) for p in all_p if symbol in p.get("portfolio", [])]
+
+    if not matching:
+        # Dynamically evaluate portfolios containing this symbol
+        metrics = r.get("stocks", [])
+        returns_df = r.get("returns_df")
+        corr_df = r.get("correlation_matrix_df")
+        tickers = [m["symbol"] for m in metrics if m["symbol"] != symbol]
+        from backend.core.portfolio import evaluate_portfolio
+
+        generated = []
+        if tickers and returns_df is not None:
+            top_stocks = tickers[:12]
+            for i in range(min(6, len(top_stocks) - 1)):
+                combo = (symbol, top_stocks[i], top_stocks[(i + 1) % len(top_stocks)])
+                try:
+                    eval_p = evaluate_portfolio(combo, metrics, returns_df, corr_df)
+                    if eval_p:
+                        generated.append(eval_p)
+                except Exception:
+                    pass
+            matching = sorted(generated, key=lambda x: x.get("dm_score", 0), reverse=True)
+
+    # Format return and risk cleanly
+    for idx, p in enumerate(matching):
+        p["rank"] = idx + 1
+        if "portfolio" not in p:
+            p["portfolio"] = [symbol]
+
+    return {"symbol": symbol, "portfolios": matching[:limit], "count": len(matching[:limit])}

@@ -323,21 +323,21 @@ async function initExplorer() {
       TradeSense.apiCall('/api/coloring'),
       TradeSense.apiCall('/api/relation'),
       TradeSense.apiCall('/api/portfolios'),
-      TradeSense.apiCall('/api/market/news')
+      TradeSense.apiCall('/api/market/news').catch(() => null)
     ]);
 
-    allStocksData = stocks || [];
+    allStocksData = stocks?.stocks || (Array.isArray(stocks) ? stocks : []);
     allCorrelationData = corr || {};
     allColoringData = coloring || {};
     allRelationData = rel || {};
     allPortfolios = portfolios?.portfolios || [];
     allNewsItems = news?.news || [];
 
-    // Populate dropdown with actual tickers
+    // Populate dropdown with all actual tickers from universe
     const picker = document.getElementById('stock-picker');
     if (picker && allStocksData.length > 0) {
       picker.innerHTML = allStocksData.map(s => `
-        <option value="${s.symbol}">${s.symbol} — ${s.company_name || s.symbol}</option>
+        <option value="${s.symbol}">${s.symbol} — ${s.company_name || s.symbol} (${s.sector || 'Equities'})</option>
       `).join('');
     }
 
@@ -390,7 +390,7 @@ function loadStockDetails(symbol) {
   // Quadrant 2: Dominance
   renderDominance(symbol, stock);
 
-  // Quadrant 3: Portfolios
+  // Quadrant 3: Portfolios (Fetches top portfolios containing this stock)
   renderPortfolios(symbol);
 
   // Quadrant 4: News
@@ -439,54 +439,74 @@ function renderDominance(symbol, stock) {
   document.getElementById('dominated-by-list').textContent = dominatedBy.length > 0 ? dominatedBy.join(', ') : 'None (Pareto-Optimal Frontier)';
 }
 
-function renderPortfolios(symbol) {
+async function renderPortfolios(symbol) {
   const container = document.getElementById('portfolio-memberships');
   if (!container) return;
 
-  const containing = allPortfolios.filter(p => (p.portfolio || []).includes(symbol)).slice(0, 3);
-
-  if (containing.length === 0) {
-    container.innerHTML = `<div class="text-xs text-slate-400 p-2">Evaluated in portfolio combinatorial space.</div>`;
-    return;
-  }
-
-  container.innerHTML = containing.map((p, idx) => `
-    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
-      <div>
-        <div class="font-bold text-xs text-slate-800">Rank #${p.rank || idx + 1}: ${(p.portfolio || []).join(' + ')}</div>
-        <div class="text-[10px] text-slate-500">Exp. Return: +${(p.raw_return || 0).toFixed(1)}% · Risk: ${(p.raw_risk || 0).toFixed(1)}%</div>
-      </div>
-      <span class="font-mono font-black text-xs px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-        ${(p.dm_score || 0).toFixed(1)} DM
-      </span>
+  container.innerHTML = `
+    <div class="p-3 bg-slate-50 rounded-xl text-slate-400 text-xs flex items-center gap-2">
+      <span class="animate-spin">⚙️</span> Generating top portfolios containing ${symbol}...
     </div>
-  `).join('');
+  `;
+
+  try {
+    const res = await TradeSense.apiCall(`/api/portfolios/for-stock/${encodeURIComponent(symbol)}`);
+    const containing = res?.portfolios || [];
+
+    if (containing.length === 0) {
+      container.innerHTML = `<div class="p-3 bg-slate-50 text-slate-500 rounded-xl text-xs">No active portfolio combinations found containing ${symbol}.</div>`;
+      return;
+    }
+
+    container.innerHTML = containing.map((p, idx) => `
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+        <div>
+          <div class="font-bold text-xs text-slate-800">Rank #${p.rank || idx + 1}: ${(p.portfolio || []).join(' + ')}</div>
+          <div class="text-[10px] text-slate-500">Exp. Return: +${(p.raw_return || 0).toFixed(1)}% · Volatility: ${(p.raw_risk || 0).toFixed(1)}% · Div Score: ${(p.diversification_score || 0).toFixed(0)}</div>
+        </div>
+        <span class="font-mono font-black text-xs px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+          ${(p.dm_score || 0).toFixed(1)} / 100
+        </span>
+      </div>
+    `).join('');
+  } catch(e) {
+    container.innerHTML = `<div class="p-3 bg-slate-50 text-slate-400 rounded-xl text-xs">Portfolio evaluation unavailable.</div>`;
+  }
 }
 
-function renderStockNews(symbol) {
+async function renderStockNews(symbol) {
   const container = document.getElementById('stock-news-list');
   if (!container) return;
 
-  const filtered = allNewsItems.filter(n => n.symbol === symbol);
+  try {
+    const newsRes = await TradeSense.apiCall(`/api/market/news?symbol=${encodeURIComponent(symbol)}`).catch(() => null);
+    const stories = newsRes?.news || [];
 
-  if (filtered.length === 0) {
+    if (stories.length === 0) {
+      container.innerHTML = `
+        <div class="p-3 bg-slate-50 rounded-xl text-slate-500 text-xs">
+          No current headlines available for ${symbol}.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = stories.slice(0, 3).map(n => `
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+        <div class="flex items-center justify-between text-[10px]">
+          <span class="font-bold text-slate-500">${n.source}</span>
+          <span class="font-bold text-emerald-600">● ${n.sentiment}</span>
+        </div>
+        <div class="text-xs font-bold text-slate-900">${n.headline}</div>
+      </div>
+    `).join('');
+  } catch(e) {
     container.innerHTML = `
-      <div class="p-3 bg-slate-50 rounded-xl text-slate-500 text-xs">
-        No active news stories matching ${symbol}. Showing broad sector intelligence.
+      <div class="p-3 bg-slate-50 rounded-xl text-slate-400 text-xs">
+        News data unavailable.
       </div>
     `;
-    return;
   }
-
-  container.innerHTML = filtered.map(n => `
-    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-      <div class="flex items-center justify-between text-[10px]">
-        <span class="font-bold text-slate-500">${n.source}</span>
-        <span class="font-bold text-emerald-600">● ${n.sentiment}</span>
-      </div>
-      <div class="text-xs font-bold text-slate-900">${n.headline}</div>
-    </div>
-  `).join('');
 }
 
 async function loadTechnicalsAndFundamentals(symbol) {
@@ -496,8 +516,8 @@ async function loadTechnicalsAndFundamentals(symbol) {
       TradeSense.apiCall(`/api/stocks/${encodeURIComponent(symbol)}/fundamentals`).catch(() => null)
     ]);
 
-    // Populate Technicals
-    if (techRes && techRes.latest) {
+    // Populate Technicals with safe fallback
+    if (techRes && techRes.latest && techRes.status !== 'unavailable') {
       const t = techRes.latest;
       document.getElementById('tech-rsi').textContent = t.rsi != null ? t.rsi.toFixed(1) : '—';
       document.getElementById('tech-rsi-cond').textContent = t.rsi_condition || '—';
@@ -514,10 +534,23 @@ async function loadTechnicalsAndFundamentals(symbol) {
 
       // Render Technical Plotly Chart
       renderTechChart(techRes.series, symbol);
+    } else {
+      document.getElementById('tech-rsi').textContent = '—';
+      document.getElementById('tech-rsi-cond').textContent = 'Unavailable with current data source';
+      document.getElementById('tech-sma20').textContent = '—';
+      document.getElementById('tech-sma50').textContent = 'SMA50: —';
+      document.getElementById('tech-ema20').textContent = '—';
+      document.getElementById('tech-ema50').textContent = 'EMA50: —';
+      document.getElementById('tech-macd').textContent = '—';
+      document.getElementById('tech-macd-hist').textContent = 'Hist: —';
+      document.getElementById('tech-bb-upper').textContent = '—';
+      document.getElementById('tech-bb-lower').textContent = 'Lower: —';
+      document.getElementById('tech-atr').textContent = '—';
+      document.getElementById('tech-vwap').textContent = 'VWAP: —';
     }
 
     // Populate Fundamentals
-    if (fundRes) {
+    if (fundRes && fundRes.valuation) {
       const v = fundRes.valuation || {};
       const p = fundRes.profitability || {};
       const f = fundRes.financial_health || {};
@@ -539,6 +572,7 @@ async function loadTechnicalsAndFundamentals(symbol) {
     }
   } catch(e) {
     console.error("Error loading technicals/fundamentals:", e);
+    document.getElementById('tech-rsi-cond').textContent = 'Unavailable with current data source';
   }
 }
 

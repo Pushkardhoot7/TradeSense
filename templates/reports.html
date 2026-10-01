@@ -127,9 +127,9 @@
           </tr>
           <tr class="hover:bg-slate-50 transition-colors">
             <td class="px-6 py-3.5 font-bold font-mono text-indigo-600">10</td>
-            <td class="px-4 py-3.5 font-bold text-slate-900">DM Multi-Objective Scoring</td>
-            <td class="px-4 py-3.5 font-mono text-slate-600 text-[11px]">0.30 Ret + 0.25 Risk + 0.25 Div + 0.10 Grp + 0.10 Dom</td>
-            <td class="px-4 py-3.5 text-slate-600">Selects Top 3 portfolios completely automatically by mathematical rank</td>
+            <td class="px-4 py-3.5 font-bold text-slate-900">Multi-Objective Normalized Scoring</td>
+            <td class="px-4 py-3.5 font-mono text-slate-600 text-[11px]">0.30 Ret + 0.25 RiskEff + 0.20 Div + 0.15 Stab + 0.10 Net</td>
+            <td class="px-4 py-3.5 text-slate-600">Scores candidates on normalized 0–100 scale across 5 core financial & topological pillars</td>
             <td class="px-6 py-3.5 text-right"><a href="/portfolio-lab" class="text-indigo-600 hover:underline font-bold">View →</a></td>
           </tr>
         </tbody>
@@ -151,21 +151,22 @@ async function loadReportPage() {
 
     const container = document.getElementById('report-summary-grid');
     if (container) {
+      const dq = data.data_quality || {};
       container.innerHTML = `
         <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-center">
-          <div class="text-xl font-bold font-mono text-indigo-600">${data.stocks_analyzed || 12} Assets</div>
-          <div class="text-[11px] text-slate-500 mt-1">Total Active Universe</div>
+          <div class="text-xl font-bold font-mono text-indigo-600">${data.stocks_analyzed || 0} Assets</div>
+          <div class="text-[11px] text-slate-500 mt-1">Across 12 Active Sectors</div>
         </div>
         <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-center">
-          <div class="text-xl font-bold font-mono text-purple-600">${data.strong_links || 8} Edges</div>
-          <div class="text-[11px] text-slate-500 mt-1">Network Connections</div>
+          <div class="text-xl font-bold font-mono text-purple-600">${data.strong_links ?? 0} Edges</div>
+          <div class="text-[11px] text-slate-500 mt-1">Market Co-Movement Links</div>
         </div>
         <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-center">
-          <div class="text-xl font-bold font-mono text-emerald-600">${data.portfolios_evaluated || 220} Combos</div>
-          <div class="text-[11px] text-slate-500 mt-1">Evaluated Portfolios</div>
+          <div class="text-xl font-bold font-mono text-emerald-600">${data.portfolios_evaluated ?? 0} Combos</div>
+          <div class="text-[11px] text-slate-500 mt-1">Combinations Evaluated</div>
         </div>
         <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-center">
-          <div class="text-xl font-bold font-mono text-amber-600">${(data.top_dm_score || 88.4).toFixed(1)} DM</div>
+          <div class="text-xl font-bold font-mono text-amber-600">${data.top_dm_score ? data.top_dm_score.toFixed(1) : '—'} / 100</div>
           <div class="text-[11px] text-slate-500 mt-1">Top Portfolio Score</div>
         </div>
       `;

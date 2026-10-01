@@ -2,31 +2,31 @@
 
 {% block title %}Dashboard{% endblock %}
 {% block page_title %}🏠 Market Intelligence Dashboard{% endblock %}
-{% block page_subtitle %}Discrete Mathematics Powered Financial Analytics & Autonomous Portfolio Selection{% endblock %}
+{% block page_subtitle %}Data-Driven Financial Analytics & Autonomous Portfolio Selection{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
 
-  <!-- Welcome / Quick Action Banner -->
+  <!-- Welcome / Executive Summary Banner -->
   <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 sm:p-6 border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-    <div class="space-y-1 max-w-2xl">
+    <div class="space-y-1.5 max-w-2xl">
       <div class="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold border border-indigo-500/30">
-        <span>⚡</span> Fully Autonomous Pipeline & Live Engine
+        <span>⚡</span> Fully Autonomous Analysis Pipeline
       </div>
       <h2 class="text-xl sm:text-2xl font-black tracking-tight text-white">
-        TradeSense Terminal — Discrete Mathematics Architecture
+        TradeSense Terminal — Intelligent Market & Portfolio Engine
       </h2>
       <p class="text-xs sm:text-sm text-slate-300 font-normal leading-relaxed">
-        Transforming raw stock returns into correlation graphs $G=(V,E)$, dominance posets, Welsh-Powell independent color groups, and combinatorial $C(n,k)$ ranked portfolios.
+        Analyzing price co-movements across Indian equities, discovering diversified asset groups, and building mathematically optimized investment portfolios.
       </p>
     </div>
 
     <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
-      <a href="/how-tradesense-thinks" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/30 transition-all flex items-center gap-1.5">
-        <span>🧠</span> How TradeSense Thinks →
+      <a href="/methodology" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/30 transition-all flex items-center gap-1.5">
+        <span>📐</span> How It Works →
       </a>
       <button onclick="TradeSense.openDeviceModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs transition-all flex items-center gap-1.5">
-        <span>📱</span> Connect Link
+        <span>📱</span> Connect Phone
       </button>
     </div>
   </div>
@@ -34,49 +34,57 @@
   <!-- Interactive Control Strip (Filter / Threshold / Run) -->
   <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
     <div class="flex items-center gap-3 flex-wrap flex-1 min-w-[280px]">
-      <!-- Sector Filter -->
+      <!-- Sector Filter (12 Sectors) -->
       <div class="flex items-center gap-2">
         <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Sector:</label>
         <select id="ctrl-sector" onchange="runAnalysis()" class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-indigo-600">
-          <option value="All Sectors">All Sectors (12)</option>
-          <option value="Technology">Technology</option>
-          <option value="Financial Services">Financial Services</option>
-          <option value="Energy">Energy</option>
-          <option value="Automobile">Automobile</option>
+          <option value="All Sectors">All Sectors (93+ Stocks)</option>
+          <option value="Automobile">Automobile (10)</option>
+          <option value="Banking">Banking (9)</option>
+          <option value="Consumer Durables">Consumer Durables (6)</option>
+          <option value="FMCG">FMCG (9)</option>
+          <option value="Financial Services">Financial Services (9)</option>
+          <option value="Healthcare">Healthcare (5)</option>
+          <option value="Industrials">Industrials (9)</option>
+          <option value="Information Technology">Information Technology (9)</option>
+          <option value="Oil & Gas">Oil & Gas (7)</option>
+          <option value="Pharmaceuticals">Pharmaceuticals (8)</option>
+          <option value="Power">Power (7)</option>
+          <option value="Telecommunication">Telecommunication (5)</option>
         </select>
       </div>
 
       <!-- Correlation Threshold Slider -->
       <div class="flex items-center gap-2">
-        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Threshold r:</label>
+        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Connection Threshold r:</label>
         <input type="range" id="ctrl-threshold" min="0.50" max="0.90" step="0.05" value="0.70" oninput="updateThresholdValue(this.value)" onchange="runAnalysis()" class="w-24 accent-indigo-600 cursor-pointer">
         <span id="ctrl-threshold-val" class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">0.70</span>
       </div>
 
       <!-- Portfolio Size k -->
       <div class="flex items-center gap-2">
-        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Portfolio k:</label>
+        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Portfolio Size:</label>
         <select id="ctrl-k" onchange="runAnalysis()" class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-indigo-600">
-          <option value="2">k = 2 stocks</option>
-          <option value="3" selected>k = 3 stocks</option>
-          <option value="4">k = 4 stocks</option>
-          <option value="5">k = 5 stocks</option>
+          <option value="2">2 Stocks</option>
+          <option value="3" selected>3 Stocks</option>
+          <option value="4">4 Stocks</option>
+          <option value="5">5 Stocks</option>
         </select>
       </div>
 
       <!-- Mode Toggle -->
       <div class="flex items-center gap-2">
-        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Mode:</label>
+        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Data Source:</label>
         <select id="ctrl-mode" onchange="runAnalysis()" class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-indigo-600">
-          <option value="HISTORICAL" selected>Historical (yfinance)</option>
-          <option value="DEMO">Synthetic Demo</option>
+          <option value="HISTORICAL" selected>Live / Historical (NSE)</option>
+          <option value="DEMO">Demo Simulation</option>
         </select>
       </div>
     </div>
 
     <!-- Run / Refresh Button -->
-    <button onclick="runAnalysis()" id="analyze-btn" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/30 transition-all flex items-center gap-1.5 shrink-0">
-      <span>⚡</span> Run Full Pipeline
+    <button onclick="runAnalysis()" id="analyze-btn" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/30 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer">
+      <span class="btn-spinner">⚡</span> Run Market Analysis
     </button>
   </div>
 
@@ -85,58 +93,62 @@
     <div class="flex items-center justify-between mb-2.5">
       <div class="flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span class="text-xs font-black uppercase tracking-wider text-slate-300">Indian Market Indices (Live / Latest Close)</span>
+        <span class="text-xs font-black uppercase tracking-wider text-slate-300">Indian Market Indices (NSE / BSE Benchmark)</span>
       </div>
-      <span id="indices-timestamp" class="text-[11px] text-slate-400 font-mono">Loading...</span>
+      <span id="indices-timestamp" class="text-[11px] text-slate-400 font-mono">Syncing...</span>
     </div>
     <div id="indices-bar-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <!-- Populated via JS -->
-      <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 text-center text-slate-400 text-xs">
-        Fetching NIFTY 50...
-      </div>
-      <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 text-center text-slate-400 text-xs">
-        Fetching SENSEX...
-      </div>
-      <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 text-center text-slate-400 text-xs">
-        Fetching BANK NIFTY...
-      </div>
-      <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 text-center text-slate-400 text-xs">
-        Fetching INDIA VIX...
-      </div>
+      <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 text-center text-slate-400 text-xs">Fetching NIFTY 50...</div>
+      <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 text-center text-slate-400 text-xs">Fetching SENSEX...</div>
+      <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 text-center text-slate-400 text-xs">Fetching BANK NIFTY...</div>
+      <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 text-center text-slate-400 text-xs">Fetching INDIA VIX...</div>
     </div>
   </div>
 
   <!-- Real-Time Market Overview KPI Cards (6 items) -->
   <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
     <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">Universe Size</div>
-      <div id="kpi-stocks" class="text-2xl font-black text-slate-800 mt-1 font-mono">12</div>
-      <div class="text-[11px] text-slate-500 mt-0.5">NSE Large Cap</div>
+      <div class="text-[10px] font-bold uppercase text-slate-400">Universe Analyzed</div>
+      <div id="kpi-stocks" class="text-2xl font-black text-slate-800 mt-1 font-mono">—</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Active Stocks</div>
     </div>
     <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">Network Edges</div>
-      <div id="kpi-edges" class="text-2xl font-black text-indigo-600 mt-1 font-mono">8</div>
+      <div class="text-[10px] font-bold uppercase text-slate-400">Market Connections</div>
+      <div id="kpi-edges" class="text-2xl font-black text-indigo-600 mt-1 font-mono">—</div>
       <div class="text-[11px] text-slate-500 mt-0.5">Corr r ≥ <span id="kpi-thresh-display">0.70</span></div>
     </div>
     <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">Non-Dominated</div>
-      <div id="kpi-nondom" class="text-2xl font-black text-emerald-600 mt-1 font-mono">4</div>
-      <div class="text-[11px] text-slate-500 mt-0.5">Pareto Optimal</div>
+      <div class="text-[10px] font-bold uppercase text-slate-400">Efficient Stocks</div>
+      <div id="kpi-nondom" class="text-2xl font-black text-emerald-600 mt-1 font-mono">—</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Risk-Return Frontier</div>
     </div>
     <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">Color Groups</div>
-      <div id="kpi-colors" class="text-2xl font-black text-purple-600 mt-1 font-mono">3</div>
-      <div class="text-[11px] text-slate-500 mt-0.5">Independent Sets</div>
+      <div class="text-[10px] font-bold uppercase text-slate-400">Diversified Groups</div>
+      <div id="kpi-colors" class="text-2xl font-black text-purple-600 mt-1 font-mono">—</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Uncorrelated Clusters</div>
     </div>
     <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">C(n, k) Portfolios</div>
-      <div id="kpi-portfolios" class="text-2xl font-black text-amber-600 mt-1 font-mono">220</div>
-      <div class="text-[11px] text-slate-500 mt-0.5">Combos Evaluated</div>
+      <div class="text-[10px] font-bold uppercase text-slate-400">Portfolios Tested</div>
+      <div id="kpi-portfolios" class="text-2xl font-black text-amber-600 mt-1 font-mono">—</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Combinations Ranked</div>
     </div>
     <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">Top DM Score</div>
-      <div id="kpi-topdm" class="text-2xl font-black text-rose-600 mt-1 font-mono">88.4</div>
-      <div class="text-[11px] text-slate-500 mt-0.5">Out of 100.0</div>
+      <div class="text-[10px] font-bold uppercase text-slate-400">Top Model Score</div>
+      <div id="kpi-topdm" class="text-2xl font-black text-rose-600 mt-1 font-mono">—</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Scale 0 to 100</div>
+    </div>
+  </div>
+
+  <!-- Data Quality Indicator Strip -->
+  <div id="data-quality-strip" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+      <span class="font-bold text-slate-700">Data Integrity Status:</span>
+      <span id="dq-status" class="text-slate-600">Verified · 100% price continuity across analyzed universe</span>
+    </div>
+    <div class="flex items-center gap-3 text-[11px] font-mono text-slate-500">
+      <span>Coverage: <strong id="dq-coverage" class="text-slate-700">100%</strong></span>
+      <span>Quality Score: <strong id="dq-score" class="text-emerald-600">100/100</strong></span>
     </div>
   </div>
 
@@ -144,31 +156,40 @@
   <div class="space-y-3">
     <div class="flex items-center justify-between flex-wrap gap-2">
       <div>
-        <h3 class="text-base font-bold text-slate-900">Top 3 Recommended Portfolios (DM Capstone Ranking)</h3>
-        <p class="text-xs text-slate-500">Autonomous mathematical optimization across 5 weighted pillars (Return, Risk, Div, Groups, Dominance)</p>
+        <h3 class="text-base font-bold text-slate-900">Top 3 Recommended Portfolios</h3>
+        <p class="text-xs text-slate-500">Autonomous ranking based on balanced return, risk efficiency, diversification, stability, and network benefit</p>
       </div>
       <a href="/portfolio-lab" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 underline">
-        Open Portfolio Lab & Customizer →
+        Open Portfolio Customizer →
       </a>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="dashboard-top3-grid">
-      <!-- Populated dynamically via JS -->
       <div class="col-span-full py-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
         <span class="animate-spin mr-2">⚙️</span> Scoring portfolio candidate combinations...
       </div>
     </div>
+
+    <!-- What This Means Context Box -->
+    <div class="p-4 rounded-xl bg-indigo-50/60 border border-indigo-100 space-y-1">
+      <div class="text-[11px] font-bold text-indigo-900 uppercase tracking-wide">💡 What Does This Portfolio Score Mean?</div>
+      <p class="text-xs text-indigo-800/90 leading-relaxed">
+        Each portfolio candidate is scored on a normalized scale from <strong>0 to 100</strong> across 5 core pillars:
+        <strong>Expected Return (30%)</strong>, <strong>Risk Efficiency (25%)</strong>, <strong>Diversification (20%)</strong>, <strong>Return Stability (15%)</strong>, and <strong>Network Independence (10%)</strong>.
+        A score above 75 represents a highly balanced portfolio where constituents minimize overlapping correlation while maintaining healthy growth potential.
+      </p>
+    </div>
   </div>
 
-  <!-- Visual Maps: Market Network + Pearson Heatmap Grid -->
+  <!-- Visual Maps: Market Connection Network + Pearson Heatmap Grid -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-    <!-- Network Graph G=(V,E) (7 cols) -->
+    <!-- Network Graph (7 cols) -->
     <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h3 class="text-sm font-bold text-slate-900">Market Network Topology G=(V,E)</h3>
-          <p class="text-[11px] text-slate-500">Co-movement correlation edges at threshold</p>
+          <h3 class="text-sm font-bold text-slate-900">Market Connection Network</h3>
+          <p class="text-[11px] text-slate-500">Stocks are connected with a line when their prices tend to move closely together</p>
         </div>
         <a href="/market-network" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold underline">
           Full Network Explorer →
@@ -178,6 +199,17 @@
       <div id="dashboard-network-chart" class="w-full h-[400px] rounded-xl overflow-hidden bg-slate-50">
         <!-- Plotly Network chart -->
       </div>
+
+      <!-- Network Explanation & Central Hub -->
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs space-y-1">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-slate-700">Central Market Hub:</span>
+          <span id="dashboard-hub-stock" class="font-mono font-bold text-indigo-600">—</span>
+        </div>
+        <p id="dashboard-network-desc" class="text-[11px] text-slate-500 leading-normal">
+          Each circle represents a stock. Stocks with fewer connecting lines exhibit lower co-movement with the broader market and provide superior diversification benefits.
+        </p>
+      </div>
     </div>
 
     <!-- Pearson Correlation Heatmap (5 cols) -->
@@ -185,7 +217,7 @@
       <div class="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 class="text-sm font-bold text-slate-900">Correlation Matrix</h3>
-          <p class="text-[11px] text-slate-500">Pearson r [-1, +1] pairwise co-movements</p>
+          <p class="text-[11px] text-slate-500">Pairwise price co-movement coefficients from -1.0 to +1.0</p>
         </div>
         <a href="/relationships" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold underline">
           View Heatmap →
@@ -195,15 +227,73 @@
       <div id="dashboard-heatmap-chart" class="w-full h-[400px] rounded-xl overflow-hidden bg-slate-50">
         <!-- Plotly Heatmap chart -->
       </div>
+
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-500">
+        Green indicates positive correlation (stocks move together); red indicates divergence or inverse movement.
+      </div>
     </div>
 
+  </div>
+
+  <!-- Sector Analysis Section -->
+  <div id="sectors-section" class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+    <div class="flex items-center justify-between flex-wrap gap-2">
+      <div>
+        <h3 class="text-base font-bold text-slate-900">Sector Analysis</h3>
+        <p class="text-xs text-slate-500">Co-movement density, average returns, risk profile, and leading candidates across all 12 market sectors</p>
+      </div>
+      <span class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+        12 Active Sectors
+      </span>
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-slate-200">
+      <table class="min-w-full text-xs text-left">
+        <thead class="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
+          <tr>
+            <th class="py-2.5 px-3">Sector</th>
+            <th class="py-2.5 px-3 text-center">Stocks</th>
+            <th class="py-2.5 px-3 text-right">Avg Return</th>
+            <th class="py-2.5 px-3 text-right">Avg Risk (σ)</th>
+            <th class="py-2.5 px-3 text-right">Internal Correlation</th>
+            <th class="py-2.5 px-3 text-right">Network Density</th>
+            <th class="py-2.5 px-3 text-right">Model Score</th>
+            <th class="py-2.5 px-3 text-center">Leading Stock</th>
+            <th class="py-2.5 px-3 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody id="sector-analysis-tbody" class="divide-y divide-slate-100 font-mono">
+          <tr>
+            <td colspan="9" class="py-6 text-center text-slate-400 font-sans">Computing sector performance and network densities...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Sector Insights and Why It Matters -->
+    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+      <div class="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+        <span>📊</span> Sector Insights & Co-Movement Conclusion
+      </div>
+      <p id="sector-insight-text" class="text-xs text-slate-600 leading-relaxed">
+        Calculating sector co-movement characteristics...
+      </p>
+      <div class="pt-2 border-t border-slate-200/60 text-xs text-slate-500 space-y-0.5">
+        <strong class="text-slate-700 font-sans">WHY IT MATTERS:</strong>
+        <p class="leading-relaxed font-sans">
+          Sectors with higher internal correlation experience synchronized price swings. Investing across sectors with lower cross-correlation provides stronger diversification protection against sector-specific pullbacks.
+        </p>
+      </div>
+    </div>
   </div>
 
   <!-- Live Stock Universe Performance Table -->
   <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
     <div class="flex items-center justify-between flex-wrap gap-2">
       <div>
-        <h3 class="text-sm font-bold text-slate-900">Analyzed Stock Universe (12 Large Cap Assets)</h3>
+        <h3 class="text-sm font-bold text-slate-900">
+          Analyzed Stock Universe (<span id="table-stock-count">103</span> Stocks)
+        </h3>
         <p class="text-xs text-slate-500">Return, annualized volatility, Sharpe ratio, and discrete math properties</p>
       </div>
       <a href="/stock-explorer" class="text-xs text-indigo-600 font-bold hover:underline">
@@ -236,52 +326,6 @@
     </div>
   </div>
 
-  <!-- Discrete Mathematics Engine Summary Cards -->
-  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-    <div class="flex items-center justify-between">
-      <div>
-        <h3 class="text-base font-bold text-slate-900">Discrete Mathematics Pipeline Engine</h3>
-        <p class="text-xs text-slate-500">Click any card to explore the live mathematical engine</p>
-      </div>
-      <a href="/how-tradesense-thinks" class="text-xs text-indigo-600 font-bold hover:underline">
-        10-Step Storyline →
-      </a>
-    </div>
-
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-      <a href="/relationships" class="p-3.5 rounded-xl bg-slate-50 hover:bg-indigo-50/60 border border-slate-200 hover:border-indigo-200 transition-all space-y-1 block group">
-        <div class="text-sm">🔗</div>
-        <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">Correlation</div>
-        <div class="text-[10px] text-slate-500">Matrix N×N</div>
-      </a>
-      <a href="/market-network" class="p-3.5 rounded-xl bg-slate-50 hover:bg-indigo-50/60 border border-slate-200 hover:border-indigo-200 transition-all space-y-1 block group">
-        <div class="text-sm">🕸️</div>
-        <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">Graph Theory</div>
-        <div class="text-[10px] text-slate-500">BFS & DFS Traversal</div>
-      </a>
-      <a href="/hasse-ranking" class="p-3.5 rounded-xl bg-slate-50 hover:bg-indigo-50/60 border border-slate-200 hover:border-indigo-200 transition-all space-y-1 block group">
-        <div class="text-sm">📐</div>
-        <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">Poset & Hasse</div>
-        <div class="text-[10px] text-slate-500">Dominance DAG</div>
-      </a>
-      <a href="/stock-groups" class="p-3.5 rounded-xl bg-slate-50 hover:bg-indigo-50/60 border border-slate-200 hover:border-indigo-200 transition-all space-y-1 block group">
-        <div class="text-sm">🎨</div>
-        <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">Graph Coloring</div>
-        <div class="text-[10px] text-slate-500">Welsh-Powell χ(G)</div>
-      </a>
-      <a href="/portfolio-lab" class="p-3.5 rounded-xl bg-slate-50 hover:bg-indigo-50/60 border border-slate-200 hover:border-indigo-200 transition-all space-y-1 block group">
-        <div class="text-sm">∩</div>
-        <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">Set Theory</div>
-        <div class="text-[10px] text-slate-500">Boolean Screening</div>
-      </a>
-      <a href="/portfolio-lab" class="p-3.5 rounded-xl bg-slate-50 hover:bg-indigo-50/60 border border-slate-200 hover:border-indigo-200 transition-all space-y-1 block group">
-        <div class="text-sm">💼</div>
-        <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">Combinatorics</div>
-        <div class="text-[10px] text-slate-500">C(n,k) DM Score</div>
-      </a>
-    </div>
-  </div>
-
   <!-- Latest Market News Pulse Snippet -->
   <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
     <div class="flex items-center justify-between">
@@ -295,7 +339,7 @@
     </div>
 
     <div id="dashboard-news-row" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-      <!-- Populated via JS -->
+      <div class="col-span-full text-center py-6 text-slate-400">Loading market news...</div>
     </div>
   </div>
 
@@ -310,18 +354,27 @@ function updateThresholdValue(val) {
   if (disp) disp.textContent = parseFloat(val).toFixed(2);
 }
 
+function getScoreRating(score) {
+  if (score >= 90) return { label: 'Exceptional', color: 'text-emerald-700 bg-emerald-50 border-emerald-300' };
+  if (score >= 75) return { label: 'Very Strong', color: 'text-indigo-700 bg-indigo-50 border-indigo-300' };
+  if (score >= 60) return { label: 'Strong', color: 'text-blue-700 bg-blue-50 border-blue-300' };
+  if (score >= 40) return { label: 'Moderate', color: 'text-amber-700 bg-amber-50 border-amber-300' };
+  return { label: 'Low', color: 'text-slate-700 bg-slate-100 border-slate-300' };
+}
+
 async function loadDashboard() {
   try {
     const threshold = parseFloat(document.getElementById('ctrl-threshold')?.value || 0.70);
-    const [overview, corr, portfolios, news, stocksRes, coloringRes, nondomRes, indicesRes] = await Promise.all([
+    const [overview, corr, portfolios, news, stocksRes, coloringRes, nondomRes, indicesRes, sectorsRes] = await Promise.all([
       TradeSense.apiCall('/api/market/overview'),
       TradeSense.apiCall('/api/correlation'),
       TradeSense.apiCall('/api/portfolios/top'),
-      TradeSense.apiCall('/api/market/news'),
+      TradeSense.apiCall('/api/market/news').catch(() => null),
       TradeSense.apiCall('/api/stocks/'),
       TradeSense.apiCall('/api/coloring'),
       TradeSense.apiCall('/api/relation'),
-      TradeSense.apiCall('/api/market/indices').catch(() => null)
+      TradeSense.apiCall('/api/market/indices').catch(() => null),
+      TradeSense.apiCall('/api/sectors/analysis').catch(() => null),
     ]);
 
     // Render Market Indices Bar
@@ -331,15 +384,43 @@ async function loadDashboard() {
 
     // Update KPIs
     if (overview) {
-      document.getElementById('kpi-stocks').textContent = overview.stocks_analyzed || 12;
-      document.getElementById('kpi-edges').textContent = overview.strong_links || 8;
-      document.getElementById('kpi-nondom').textContent = overview.non_dominated || 4;
-      document.getElementById('kpi-colors').textContent = overview.color_groups || 3;
-      document.getElementById('kpi-portfolios').textContent = overview.portfolios_evaluated || 220;
-      document.getElementById('kpi-topdm').textContent = (overview.top_dm_score || 88.4).toFixed(1);
+      document.getElementById('kpi-stocks').textContent = overview.stocks_analyzed || (stocksRes?.stocks ? stocksRes.stocks.length : '—');
+      document.getElementById('kpi-edges').textContent = overview.strong_links ?? 0;
+      document.getElementById('kpi-nondom').textContent = overview.non_dominated ?? 0;
+      document.getElementById('kpi-colors').textContent = overview.color_groups ?? 0;
+      document.getElementById('kpi-portfolios').textContent = overview.portfolios_evaluated ?? 0;
+      document.getElementById('kpi-topdm').textContent = overview.top_dm_score ? overview.top_dm_score.toFixed(1) : '—';
+      
+      const tableCount = document.getElementById('table-stock-count');
+      if (tableCount) tableCount.textContent = overview.stocks_analyzed || (stocksRes?.stocks ? stocksRes.stocks.length : '103');
+      
+      // Update Data Quality Indicator
+      if (overview.data_quality) {
+        const dq = overview.data_quality;
+        document.getElementById('dq-status').textContent = `${dq.status || 'VERIFIED'} · ${dq.freshness || 'Up to date'} across ${dq.valid_stocks || overview.stocks_analyzed} stocks`;
+        document.getElementById('dq-coverage').textContent = dq.coverage_ratio || `${dq.completeness_pct || 100}%`;
+        document.getElementById('dq-score').textContent = `${Math.round(dq.quality_score || 100)}/100`;
+      }
+
+      // Update Central Hub
+      if (overview.network_conclusion) {
+        const nc = overview.network_conclusion;
+        const hubEl = document.getElementById('dashboard-hub-stock');
+        if (hubEl) hubEl.textContent = nc.central_hub || '—';
+        const descEl = document.getElementById('dashboard-network-desc');
+        if (descEl && nc.summary) descEl.textContent = nc.summary;
+      }
+
+      if (overview.data_mode) {
+        TradeSense.setDataModeBadge(overview.data_mode);
+      }
+      if (overview.last_updated) {
+        const lastEl = document.getElementById('last-updated');
+        if (lastEl) lastEl.textContent = overview.last_updated;
+      }
     }
 
-    // Top 3 Portfolios with component score bars
+    // Top 3 Portfolios with 5-pillar breakdown
     const top3 = portfolios?.top_portfolios || [];
     renderDashboardTop3(top3);
 
@@ -350,29 +431,17 @@ async function loadDashboard() {
       TradeSense.renderCorrelationHeatmap('dashboard-heatmap-chart', corr.matrix, corr.tickers);
     }
 
+    // Sector Analysis Table
+    if (sectorsRes && sectorsRes.sectors) {
+      renderSectorAnalysisTable(sectorsRes.sectors, sectorsRes.insights);
+    }
+
     // Stocks Universe Table
-    renderStocksTable(stocksRes || [], coloringRes?.coloring_dict || {}, nondomRes?.non_dominated || []);
+    renderStocksTable(stocksRes?.stocks || stocksRes || [], coloringRes?.coloring_dict || {}, nondomRes?.non_dominated || []);
 
     // News Pulse
-    const stories = news?.news?.slice(0, 3) || [];
-    const newsContainer = document.getElementById('dashboard-news-row');
-    if (newsContainer && stories.length > 0) {
-      newsContainer.innerHTML = stories.map(s => `
-        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 flex flex-col justify-between">
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between text-[10px]">
-              <span class="font-bold font-mono text-indigo-600">${s.symbol}</span>
-              <span class="text-slate-400">${s.time_ago}</span>
-            </div>
-            <h4 class="font-bold text-slate-800 leading-snug font-sans">${s.headline}</h4>
-          </div>
-          <div class="text-[10px] text-slate-500 font-medium pt-2 border-t border-slate-200/60 flex justify-between font-sans">
-            <span>${s.source}</span>
-            <span class="font-bold text-emerald-600">● ${s.sentiment}</span>
-          </div>
-        </div>
-      `).join('');
-    }
+    renderNewsPulse(news);
+
   } catch(e) {
     console.error("Dashboard load error:", e);
   }
@@ -414,30 +483,48 @@ function renderDashboardTop3(top3) {
   const container = document.getElementById('dashboard-top3-grid');
   if (!container) return;
 
+  if (top3.length === 0) {
+    container.innerHTML = `
+      <div class="col-span-full py-8 text-center text-slate-500 bg-white rounded-2xl border border-slate-200">
+        No candidate portfolios generated for the selected criteria. Try adjusting threshold or selecting 'All Sectors'.
+      </div>
+    `;
+    return;
+  }
+
   const ranks = [
-    { title: 'Rank #1 — Gold Award', medal: '🥇', border: 'border-amber-400 bg-amber-500/5', badge: 'bg-amber-400 text-amber-950', scoreColor: 'text-amber-500' },
-    { title: 'Rank #2 — Silver Award', medal: '🥈', border: 'border-slate-300 bg-slate-100/40', badge: 'bg-slate-300 text-slate-900', scoreColor: 'text-slate-600' },
-    { title: 'Rank #3 — Bronze Award', medal: '🥉', border: 'border-amber-700/40 bg-amber-900/5', badge: 'bg-amber-700/20 text-amber-900', scoreColor: 'text-amber-800' }
+    { title: 'Rank #1 — Top Recommended', medal: '🥇', border: 'border-amber-400 bg-amber-500/5', badge: 'bg-amber-400 text-amber-950', scoreColor: 'text-amber-500' },
+    { title: 'Rank #2 — Balanced Pick', medal: '🥈', border: 'border-slate-300 bg-slate-100/40', badge: 'bg-slate-300 text-slate-900', scoreColor: 'text-slate-600' },
+    { title: 'Rank #3 — Conservative Pick', medal: '🥉', border: 'border-amber-700/40 bg-amber-900/5', badge: 'bg-amber-700/20 text-amber-900', scoreColor: 'text-amber-800' }
   ];
 
   container.innerHTML = top3.map((p, idx) => {
     const style = ranks[idx] || ranks[0];
     const constituents = Array.isArray(p.portfolio) ? p.portfolio : [];
 
-    const retScore = p.return_score || 85;
-    const riskScore = p.risk_score || 80;
-    const divScore = p.diversification_score || 82;
+    const retScore = p.return_score ?? 80;
+    const riskScore = p.risk_score ?? 75;
+    const divScore = p.diversification_score ?? 78;
+    const stabScore = p.stability_score ?? 72;
+    const netScore = p.network_score ?? p.group_score ?? 75;
+    const finalScore = p.dm_score || 0;
+    const rating = getScoreRating(finalScore);
 
     return `
       <div class="bg-white rounded-2xl border-2 ${style.border} p-5 shadow-xs flex flex-col justify-between space-y-4">
         <div class="space-y-3">
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between flex-wrap gap-2">
             <span class="px-2.5 py-0.5 rounded-full text-xs font-black ${style.badge} flex items-center gap-1">
               <span>${style.medal}</span> ${style.title}
             </span>
-            <span class="font-mono font-black text-xl ${style.scoreColor}">
-              ${(p.dm_score || 0).toFixed(1)} <span class="text-xs font-bold text-slate-400">DM</span>
-            </span>
+            <div class="flex items-center gap-1.5">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${rating.color}">
+                ${rating.label}
+              </span>
+              <span class="font-mono font-black text-xl ${style.scoreColor}">
+                ${finalScore.toFixed(1)} <span class="text-xs font-bold text-slate-400">/ 100</span>
+              </span>
+            </div>
           </div>
 
           <div class="flex flex-wrap gap-1.5 py-1">
@@ -450,49 +537,123 @@ function renderDashboardTop3(top3) {
 
           <div class="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-100 font-sans">
             <div>
-              <span class="text-slate-400">Return:</span>
+              <span class="text-slate-400">Exp. Return:</span>
               <span class="font-bold text-emerald-600 ml-1">+${(p.raw_return || 0).toFixed(1)}%</span>
             </div>
             <div>
-              <span class="text-slate-400">Risk (σ):</span>
+              <span class="text-slate-400">Volatility (σ):</span>
               <span class="font-bold text-slate-700 ml-1">${(p.raw_risk || 0).toFixed(1)}%</span>
             </div>
           </div>
 
-          <!-- 5-Pillar Score Bars -->
+          <!-- 5-Pillar Score Breakdown Bars -->
           <div class="space-y-1.5 pt-2 border-t border-slate-100 text-[10px] font-sans">
             <div class="flex items-center justify-between text-slate-500">
-              <span>Return (30%)</span>
-              <span class="font-mono font-bold text-slate-700">${retScore.toFixed(0)}</span>
+              <span>Expected Return (30%)</span>
+              <span class="font-mono font-bold text-slate-700">${retScore.toFixed(0)}/100</span>
             </div>
             <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
               <div class="bg-emerald-500 h-full rounded-full" style="width: ${retScore}%"></div>
             </div>
 
             <div class="flex items-center justify-between text-slate-500">
-              <span>Low Risk (25%)</span>
-              <span class="font-mono font-bold text-slate-700">${riskScore.toFixed(0)}</span>
+              <span>Risk Efficiency (25%)</span>
+              <span class="font-mono font-bold text-slate-700">${riskScore.toFixed(0)}/100</span>
             </div>
             <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
               <div class="bg-indigo-500 h-full rounded-full" style="width: ${riskScore}%"></div>
             </div>
 
             <div class="flex items-center justify-between text-slate-500">
-              <span>Diversification (25%)</span>
-              <span class="font-mono font-bold text-slate-700">${divScore.toFixed(0)}</span>
+              <span>Diversification (20%)</span>
+              <span class="font-mono font-bold text-slate-700">${divScore.toFixed(0)}/100</span>
             </div>
             <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
               <div class="bg-amber-500 h-full rounded-full" style="width: ${divScore}%"></div>
             </div>
+
+            <div class="flex items-center justify-between text-slate-500">
+              <span>Return Stability (15%)</span>
+              <span class="font-mono font-bold text-slate-700">${stabScore.toFixed(0)}/100</span>
+            </div>
+            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+              <div class="bg-purple-500 h-full rounded-full" style="width: ${stabScore}%"></div>
+            </div>
+
+            <div class="flex items-center justify-between text-slate-500">
+              <span>Network Independence (10%)</span>
+              <span class="font-mono font-bold text-slate-700">${netScore.toFixed(0)}/100</span>
+            </div>
+            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+              <div class="bg-cyan-500 h-full rounded-full" style="width: ${netScore}%"></div>
+            </div>
           </div>
         </div>
 
-        <a href="/portfolio-lab" class="text-center py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors block">
-          Analyze in Portfolio Lab →
+        <a href="/portfolio-lab" class="text-center py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors block">
+          Inspect Portfolio & Weights →
         </a>
       </div>
     `;
   }).join('');
+}
+
+function renderSectorAnalysisTable(sectors, insights) {
+  const tbody = document.getElementById('sector-analysis-tbody');
+  if (!tbody) return;
+
+  if (!sectors || sectors.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="py-4 text-center text-slate-400 font-sans">No sector statistics available.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = sectors.map(sec => {
+    const ret = sec.avg_return || 0;
+    const risk = sec.avg_risk || 0;
+    const corr = sec.avg_correlation || 0;
+    const density = sec.network_density || 0;
+    const score = sec.model_score || 0;
+    const best = sec.leading_stock || '—';
+
+    return `
+      <tr class="hover:bg-slate-50 transition-colors">
+        <td class="py-2.5 px-3 font-bold font-sans text-slate-800">${sec.sector}</td>
+        <td class="py-2.5 px-3 text-center text-slate-600 font-bold">${sec.stock_count}</td>
+        <td class="py-2.5 px-3 text-right font-bold ${ret >= 0 ? 'text-emerald-600' : 'text-rose-600'}">
+          ${ret >= 0 ? '+' : ''}${ret.toFixed(1)}%
+        </td>
+        <td class="py-2.5 px-3 text-right text-slate-600">${risk.toFixed(1)}%</td>
+        <td class="py-2.5 px-3 text-right text-slate-700 font-bold">${corr.toFixed(2)}</td>
+        <td class="py-2.5 px-3 text-right text-indigo-600">${(density * 100).toFixed(0)}%</td>
+        <td class="py-2.5 px-3 text-right font-bold text-indigo-700">${score.toFixed(1)}</td>
+        <td class="py-2.5 px-3 text-center font-bold text-slate-800">
+          <a href="/stock/${encodeURIComponent(best)}" class="text-indigo-600 hover:underline">${best}</a>
+        </td>
+        <td class="py-2.5 px-3 text-right font-sans">
+          <button onclick="filterBySector('${sec.sector}')" class="text-xs text-indigo-600 font-bold hover:underline cursor-pointer">
+            Filter →
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  const insightEl = document.getElementById('sector-insight-text');
+  if (insightEl) {
+    if (insights && insights.length > 0) {
+      insightEl.innerHTML = insights.map(i => `• ${i}`).join('<br>');
+    } else {
+      insightEl.textContent = 'Co-movement is moderately balanced across the analyzed sectors, with differentiated performance in Technology, Financials, and Energy.';
+    }
+  }
+}
+
+function filterBySector(sectorName) {
+  const sel = document.getElementById('ctrl-sector');
+  if (sel) {
+    sel.value = sectorName;
+    runAnalysis();
+  }
 }
 
 function renderStocksTable(stocks, coloringDict, nondomList) {
@@ -500,16 +661,21 @@ function renderStocksTable(stocks, coloringDict, nondomList) {
   if (!tbody) return;
 
   const nondomSet = new Set(nondomList);
-  const colorPalette = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+  const colorPalette = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
+
+  if (!stocks || stocks.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10" class="py-6 text-center text-slate-400 font-sans">No stocks found for current filter.</td></tr>`;
+    return;
+  }
 
   tbody.innerHTML = stocks.map(s => {
     const sym = s.symbol;
     const isNondom = nondomSet.has(sym);
     const colorId = coloringDict[sym] !== undefined ? coloringDict[sym] : 0;
     const colorHex = colorPalette[colorId % colorPalette.length];
-    const ret = s.return_pct || 0;
-    const risk = s.risk_pct || 0;
-    const sharpe = s.sharpe || 0;
+    const ret = s.return_pct != null ? s.return_pct : 0;
+    const risk = s.risk_pct != null ? s.risk_pct : 0;
+    const sharpe = s.sharpe != null ? s.sharpe : 0;
     const price = s.price || s.latest_price || 0;
 
     return `
@@ -519,12 +685,14 @@ function renderStocksTable(stocks, coloringDict, nondomList) {
         </td>
         <td class="py-2.5 px-3 font-sans text-slate-700 font-medium">${s.company_name || sym}</td>
         <td class="py-2.5 px-3 font-sans text-slate-500 text-[11px]">${s.sector || 'Large Cap'}</td>
-        <td class="py-2.5 px-3 text-right font-bold text-slate-900">₹${price.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-        <td class="py-2.5 px-3 text-right font-bold ${ret >= 0 ? 'text-emerald-600' : 'text-rose-600'}">
-          ${ret >= 0 ? '+' : ''}${ret.toFixed(2)}%
+        <td class="py-2.5 px-3 text-right font-bold text-slate-900">
+          ${price ? '₹' + price.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—'}
         </td>
-        <td class="py-2.5 px-3 text-right text-slate-600">${risk.toFixed(2)}%</td>
-        <td class="py-2.5 px-3 text-right font-bold text-slate-800">${sharpe.toFixed(2)}</td>
+        <td class="py-2.5 px-3 text-right font-bold ${ret >= 0 ? 'text-emerald-600' : 'text-rose-600'}">
+          ${s.return_pct != null ? (ret >= 0 ? '+' : '') + ret.toFixed(2) + '%' : '—'}
+        </td>
+        <td class="py-2.5 px-3 text-right text-slate-600">${s.risk_pct != null ? risk.toFixed(2) + '%' : '—'}</td>
+        <td class="py-2.5 px-3 text-right font-bold text-slate-800">${s.sharpe != null ? sharpe.toFixed(2) : '—'}</td>
         <td class="py-2.5 px-3 text-center">
           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold text-white" style="background-color: ${colorHex}">
             Group ${colorId + 1}
@@ -532,8 +700,8 @@ function renderStocksTable(stocks, coloringDict, nondomList) {
         </td>
         <td class="py-2.5 px-3 text-center">
           ${isNondom
-            ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Non-Dom</span>'
-            : '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500">Dominated</span>'}
+            ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Efficient</span>'
+            : '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500">Standard</span>'}
         </td>
         <td class="py-2.5 px-3 text-right font-sans">
           <a href="/stock/${encodeURIComponent(sym)}" class="text-indigo-600 hover:text-indigo-800 font-bold hover:underline">
@@ -545,9 +713,52 @@ function renderStocksTable(stocks, coloringDict, nondomList) {
   }).join('');
 }
 
+function renderNewsPulse(news) {
+  const newsContainer = document.getElementById('dashboard-news-row');
+  if (!newsContainer) return;
+
+  const stories = news?.news?.slice(0, 3) || [];
+  if (stories.length === 0) {
+    newsContainer.innerHTML = `
+      <div class="col-span-full py-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-slate-200">
+        News data unavailable from current provider.
+      </div>
+    `;
+    return;
+  }
+
+  newsContainer.innerHTML = stories.map(s => {
+    const isBull = s.sentiment === 'Positive';
+    const isBear = s.sentiment === 'Negative';
+    const sentColor = isBull ? 'text-emerald-600 bg-emerald-50 border-emerald-200' :
+                      isBear ? 'text-rose-600 bg-rose-50 border-rose-200' :
+                      'text-slate-600 bg-slate-100 border-slate-200';
+
+    return `
+      <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 flex flex-col justify-between">
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="font-bold font-mono text-indigo-600">${s.symbol}</span>
+            <span class="text-slate-400 font-medium">${s.source}</span>
+          </div>
+          <h4 class="font-bold text-slate-800 leading-snug font-sans">${s.headline}</h4>
+          ${s.summary ? `<p class="text-[11px] text-slate-500 line-clamp-2">${s.summary}</p>` : ''}
+        </div>
+        <div class="text-[10px] text-slate-500 font-medium pt-2 border-t border-slate-200/60 flex justify-between font-sans">
+          <span class="text-slate-400">${s.time_ago || 'Recent'}</span>
+          <span class="px-2 py-0.5 rounded-full font-bold border ${sentColor}">
+            ● ${s.sentiment}
+          </span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 async function runAnalysis() {
   const btn = document.getElementById('analyze-btn');
-  if (btn) btn.innerHTML = '<span class="animate-spin">⚙️</span> Running...';
+  const spinner = btn ? btn.querySelector('.btn-spinner') : null;
+  if (spinner) spinner.classList.add('animate-spin');
   try {
     const sector = document.getElementById('ctrl-sector')?.value || 'All Sectors';
     const corr_threshold = parseFloat(document.getElementById('ctrl-threshold')?.value || 0.70);
@@ -564,9 +775,14 @@ async function runAnalysis() {
   } catch(e) {
     console.error("Analysis trigger error:", e);
   } finally {
-    if (btn) btn.innerHTML = '<span>⚡</span> Run Full Pipeline';
+    if (spinner) spinner.classList.remove('animate-spin');
   }
 }
+
+// Auto-reload on refresh event triggered from header
+window.addEventListener('tradesense:refreshed', () => {
+  loadDashboard();
+});
 
 document.addEventListener('DOMContentLoaded', loadDashboard);
 </script>

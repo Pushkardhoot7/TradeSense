@@ -48,12 +48,65 @@ window.TradeSense = (function() {
   function setDataModeBadge(mode) {
     const badge = document.getElementById('data-mode-badge');
     const sidebar = document.getElementById('sidebar-data-mode');
-    const text = (mode || 'DEMO').toUpperCase().includes('DEMO') ? 'DEMO DATA' :
-                 (mode || '').toUpperCase().includes('HIST') ? 'HISTORICAL DATA' : 'LIVE DATA';
-    const cls  = (mode || '').toUpperCase().includes('DEMO') ? 'badge-demo' :
-                 (mode || '').toUpperCase().includes('HIST') ? 'badge-historical' : 'badge-live';
-    if (badge) { badge.textContent = text; badge.className = cls; }
-    if (sidebar) { sidebar.textContent = text; }
+    const m = (mode || '').toUpperCase();
+    let text = 'HISTORICAL DATA';
+    let cls = 'badge-historical';
+    
+    if (m.includes('LIVE')) {
+      text = '● LIVE DATA';
+      cls = 'badge-live';
+    } else if (m.includes('HIST')) {
+      text = 'HISTORICAL DATA';
+      cls = 'badge-historical';
+    } else if (m.includes('DEMO')) {
+      text = 'DEMO DATA';
+      cls = 'badge-demo';
+    } else if (m.includes('STALE')) {
+      text = 'STALE DATA';
+      cls = 'px-2 py-0.5 rounded font-bold text-xs bg-amber-100 text-amber-800 border border-amber-300';
+    } else if (m.includes('UNAVAIL')) {
+      text = 'DATA UNAVAILABLE';
+      cls = 'px-2 py-0.5 rounded font-bold text-xs bg-rose-100 text-rose-800 border border-rose-300';
+    }
+    
+    if (badge) { badge.textContent = text; badge.className = cls + ' cursor-pointer text-xs'; }
+    if (sidebar) { 
+      const txtSpan = document.getElementById('sidebar-mode-text');
+      if (txtSpan) txtSpan.textContent = text;
+    }
+  }
+
+  async function triggerRefresh() {
+    const btn = document.getElementById('btn-refresh-live');
+    const icon = btn ? btn.querySelector('.refresh-icon') : null;
+    if (icon) icon.classList.add('animate-spin');
+    try {
+      const mode = (document.getElementById('ctrl-mode')?.value || 'HISTORICAL');
+      const sector = (document.getElementById('ctrl-sector')?.value || 'All Sectors');
+      const threshold = parseFloat(document.getElementById('ctrl-threshold')?.value || 0.70);
+      const k = parseInt(document.getElementById('ctrl-k')?.value || 3);
+      
+      const res = await apiCall('/api/refresh', 'POST', {
+        data_mode: mode,
+        sector: sector,
+        corr_threshold: threshold,
+        portfolio_k: k
+      });
+      
+      const lastUp = document.getElementById('last-updated');
+      if (lastUp && res.created_at) {
+        lastUp.textContent = res.created_at;
+      }
+      if (res.data_mode) {
+        setDataModeBadge(res.data_mode);
+      }
+      
+      window.dispatchEvent(new CustomEvent('tradesense:refreshed', { detail: res }));
+    } catch(err) {
+      console.error('Refresh failed:', err);
+    } finally {
+      if (icon) icon.classList.remove('animate-spin');
+    }
   }
 
   // ── Plotly: Correlation Heatmap ──────────────────────────────────────────
@@ -335,7 +388,7 @@ window.TradeSense = (function() {
     formatNumber, formatPercent, formatCurrency, setDataModeBadge,
     renderCorrelationHeatmap, renderNetworkGraph, renderHasseDiagram,
     renderPortfolioRadar, renderPriceChart, renderPortfolioCards,
-    updateKpiCards, openDataSourceModal, closeDataSourceModal,
+    updateKpiCards, openDataSourceModal, closeDataSourceModal, triggerRefresh,
     toggleSidebar, closeSidebarMobile, openDeviceModal, closeDeviceModal, copyDeviceLink,
     get currentAnalysis() { return currentAnalysis; },
     set currentAnalysis(v) { currentAnalysis = v; },

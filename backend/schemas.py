@@ -41,8 +41,8 @@ class AnalyzeRequest(BaseModel):
         description="Portfolio size k for C(n,k) combinatorial generation.",
     )
     data_mode: str = Field(
-        default="DEMO",
-        description="Data source mode: 'DEMO' (synthetic) or 'HISTORICAL' (yfinance).",
+        default="HISTORICAL",
+        description="Data source mode: 'HISTORICAL' (yfinance), 'LIVE', 'STALE', 'UNAVAILABLE', or 'DEMO'.",
     )
     return_threshold: float = Field(
         default=5.0,
@@ -56,7 +56,7 @@ class AnalyzeRequest(BaseModel):
     @field_validator("data_mode")
     @classmethod
     def validate_data_mode(cls, v: str) -> str:
-        allowed = {"DEMO", "HISTORICAL"}
+        allowed = {"HISTORICAL", "LIVE", "STALE", "UNAVAILABLE", "DEMO"}
         if v.upper() not in allowed:
             raise ValueError(f"data_mode must be one of {allowed}; got '{v}'.")
         return v.upper()

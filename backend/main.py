@@ -181,6 +181,10 @@ async def backtesting_page(request: Request):
 async def reports_page(request: Request):
     return templates.TemplateResponse(request=request, name="reports.html")
 
+@app.get("/methodology", include_in_schema=False)
+async def methodology_page(request: Request):
+    return templates.TemplateResponse(request=request, name="academic.html")
+
 
 # ---------------------------------------------------------------------------
 # Global exception handler

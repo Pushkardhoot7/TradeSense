@@ -1,24 +1,18 @@
 """
-TradeSense V2 — Full Analysis Pipeline Orchestrator
+TradeSense V2.1 — Full Analysis Pipeline Orchestrator
 =====================================================
-Runs all 15 analysis stages in sequence, wrapping each in try/except
+Runs all analysis stages in sequence, wrapping each in try/except
 so that a failure in one stage never aborts the entire run.
 
-Usage
------
-    from backend.pipeline import AnalysisPipeline
-    from backend.schemas import AnalyzeRequest
-
-    config = AnalyzeRequest(sector="IT Services", period="1y", data_mode="DEMO")
-    result = AnalysisPipeline(config).run()
+Supports 60+ stocks across 12 NSE sectors.
 """
 
 from __future__ import annotations
 
 import csv
-import json
 import logging
 import uuid
+from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -67,8 +61,145 @@ def _load_universe(sector: str) -> list[dict]:
     return rows
 
 
+def _get_all_sectors() -> list[dict]:
+    """Return list of all sectors with their stock counts from the universe CSV."""
+    if not UNIVERSE_CSV.exists():
+        return []
+    sector_counts: dict[str, int] = defaultdict(int)
+    with UNIVERSE_CSV.open(newline="", encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            sym = row.get("symbol", "").strip()
+            sec = row.get("sector", "").strip()
+            if sym and sym.endswith(".NS") and sec:
+                sector_counts[sec] += 1
+    return [{"sector": s, "stock_count": c} for s, c in sorted(sector_counts.items())]
+
+
+def _compute_data_quality(valid_count: int, total_count: int,
+                          missing_data_pct: float = 0.0) -> dict:
+    """Compute data quality metrics."""
+    if total_count == 0:
+        return {"level": "UNAVAILABLE", "score": 0, "valid_stocks": 0,
+                "total_stocks": 0, "coverage_pct": 0}
+    coverage = (valid_count / total_count) * 100
+    if coverage >= 90 and missing_data_pct < 5:
+        level = "HIGH"
+    elif coverage >= 70:
+        level = "MEDIUM"
+    else:
+        level = "LOW"
+    return {
+        "level": level,
+        "score": round(coverage, 1),
+        "valid_stocks": valid_count,
+        "total_stocks": total_count,
+        "coverage_pct": round(coverage, 1),
+    }
+
+
+def _compute_sector_analysis(metrics_list: list[dict], corr_df: pd.DataFrame,
+                             adj: dict, threshold: float) -> list[dict]:
+    """Compute per-sector analytics from the analyzed stock metrics."""
+    sector_stocks: dict[str, list[dict]] = defaultdict(list)
+    for m in metrics_list:
+        sec = m.get("sector", "Unknown")
+        sector_stocks[sec].append(m)
+
+    sector_results = []
+    for sector_name, stocks in sorted(sector_stocks.items()):
+        returns = [s.get("return_pct", 0) or 0 for s in stocks]
+        risks = [s.get("risk_pct", 0) or 0 for s in stocks]
+
+        # Average pairwise correlation within sector
+        syms = [s["symbol"] for s in stocks]
+        corr_vals = []
+        if corr_df is not None and not corr_df.empty:
+            for i in range(len(syms)):
+                for j in range(i + 1, len(syms)):
+                    if syms[i] in corr_df.columns and syms[j] in corr_df.columns:
+                        val = float(corr_df.loc[syms[i], syms[j]])
+                        if not pd.isna(val):
+                            corr_vals.append(val)
+
+        # Sector network density
+        sector_edges = 0
+        if adj:
+            for sym in syms:
+                for nb, _ in adj.get(sym, []):
+                    if nb in syms and sym < nb:
+                        sector_edges += 1
+        n_s = len(syms)
+        sector_density = (2 * sector_edges / (n_s * (n_s - 1))) if n_s >= 2 else 0
+
+        avg_ret = sum(returns) / len(returns) if returns else 0
+        avg_risk = sum(risks) / len(risks) if risks else 0
+        avg_corr = sum(corr_vals) / len(corr_vals) if corr_vals else 0
+
+        # Simple sector score (diversification-aware)
+        ret_component = min(avg_ret / 50 * 100, 100) if avg_ret > 0 else 0
+        risk_component = max(0, 100 - avg_risk * 2) if avg_risk > 0 else 50
+        div_component = max(0, 100 * (1 - avg_corr)) if avg_corr >= 0 else 50
+        sector_score = round(0.4 * ret_component + 0.3 * risk_component + 0.3 * div_component, 1)
+
+        sector_results.append({
+            "sector": sector_name,
+            "stocks_analyzed": len(stocks),
+            "avg_return": round(avg_ret, 2),
+            "avg_risk": round(avg_risk, 2),
+            "avg_correlation": round(avg_corr, 4),
+            "network_density": round(sector_density, 4),
+            "sector_edges": sector_edges,
+            "model_score": max(0, min(100, sector_score)),
+            "stock_symbols": syms,
+        })
+
+    return sector_results
+
+
+def _generate_network_conclusion(stats: dict, strong_rels: list, components: list,
+                                 metrics_list: list) -> dict:
+    """Generate dynamic plain-English network interpretation."""
+    v = stats.get("num_vertices", 0)
+    e = stats.get("num_edges", 0)
+    density = stats.get("density", 0)
+    most_conn = stats.get("most_connected_stock", "N/A")
+    num_comp = stats.get("connected_components", 0)
+
+    density_pct = round(density * 100, 1)
+
+    if density_pct > 60:
+        density_desc = "very high"
+        density_insight = "Many stocks in this universe show strong co-movement. Holding multiple stocks from this set may provide less diversification than expected."
+    elif density_pct > 30:
+        density_desc = "moderate"
+        density_insight = "There is a reasonable mix of connected and independent stocks, suggesting some diversification opportunities exist."
+    elif density_pct > 10:
+        density_desc = "low"
+        density_insight = "Most stocks have weak relationships at the current threshold. This suggests good diversification potential across the universe."
+    else:
+        density_desc = "very low"
+        density_insight = "Very few strong connections exist between stocks at the current threshold. The universe appears well-diversified."
+
+    conclusion_text = f"The market network contains {v} stocks with {e} strong connections (density: {density_pct}%). {density_insight}"
+    if most_conn and most_conn != "N/A":
+        mc_display = most_conn.replace(".NS", "")
+        conclusion_text += f" {mc_display} is the most connected stock in the network."
+    if num_comp > 1:
+        conclusion_text += f" There are {num_comp} distinct groups of connected stocks."
+
+    return {
+        "summary": conclusion_text,
+        "density_level": density_desc,
+        "density_pct": density_pct,
+        "stocks_analyzed": v,
+        "connections": e,
+        "connected_groups": num_comp,
+        "most_connected": most_conn,
+    }
+
+
 class AnalysisPipeline:
-    """Orchestrates the full TradeSense V2 discrete-math analysis pipeline."""
+    """Orchestrates the full TradeSense V2.1 analysis pipeline."""
 
     def __init__(self, config: AnalyzeRequest) -> None:
         self.config      = config
@@ -94,6 +225,7 @@ class AnalysisPipeline:
             else:
                 from backend.providers.yfinance_provider import YFinanceProvider
                 provider = YFinanceProvider()
+            result["provider_label"] = provider.data_mode_label
             logger.info("[Stage 1] Provider: %s", provider.data_mode_label)
         except Exception as exc:
             logger.error("[Stage 1] Provider init failed: %s", exc)
@@ -105,18 +237,26 @@ class AnalysisPipeline:
         except Exception as exc:
             logger.error("[Stage 2] Universe load failed: %s", exc)
 
-        # In demo mode, always use the demo provider's built-in symbol list
+        # Sector info
+        all_sectors = _get_all_sectors()
+        result["all_sectors"] = all_sectors
+        result["sector_count"] = len(all_sectors)
+
+        # In demo mode, use demo provider's built-in symbol list
         if cfg.data_mode == "DEMO" and provider:
             symbols = provider.supported_tickers
         else:
-            symbols = [r["symbol"] for r in universe][:20]  # cap live at 20
+            # NO CAP — use all stocks from the universe for the selected sector
+            symbols = [r["symbol"] for r in universe]
 
         symbol_meta: dict[str, dict] = {r["symbol"]: r for r in universe}
         result["tickers"] = symbols
+        result["universe_total"] = len(symbols)
 
         # ── Stage 3: Historical price data ────────────────────────────────
         price_data: dict[str, pd.DataFrame] = {}
         start_date, end_date = _period_to_dates(cfg.period)
+        failed_symbols: list[str] = []
         if provider:
             for sym in symbols:
                 try:
@@ -124,10 +264,18 @@ class AnalysisPipeline:
                     if not df.empty:
                         price_data[sym] = df
                 except Exception as sym_exc:
+                    failed_symbols.append(sym)
                     logger.warning("[Stage 3] No data for %s: %s", sym, sym_exc)
         valid_symbols = list(price_data.keys())
         result["tickers"] = valid_symbols
-        logger.info("[Stage 3] Price data: %d stocks", len(valid_symbols))
+        result["failed_symbols"] = failed_symbols
+        logger.info("[Stage 3] Price data: %d stocks (%d failed)", len(valid_symbols), len(failed_symbols))
+
+        # Data quality
+        result["data_quality"] = _compute_data_quality(
+            len(valid_symbols), len(symbols),
+            missing_data_pct=len(failed_symbols) / max(len(symbols), 1) * 100
+        )
 
         # Save price history for /stock/{symbol}/history endpoint
         price_history: dict[str, list] = {}
@@ -146,12 +294,10 @@ class AnalysisPipeline:
             from backend.core.metrics import calculate_stock_metrics
             for sym, df in price_data.items():
                 m = calculate_stock_metrics(sym, df)
-                # Normalise key names so downstream modules (relations, sets, scoring)
-                # always receive: return_pct, risk_pct, sharpe, avg_volume
+                # Normalise key names
                 m["return_pct"]  = m.get("period_return_pct", m.get("return_pct", 0.0))
                 m["risk_pct"]    = m.get("annualized_risk_pct", m.get("risk_pct", 0.0))
                 m["sharpe"]      = m.get("sharpe_ratio", m.get("sharpe", 0.0))
-                # avg_volume from price DataFrame
                 if "Volume" in df.columns:
                     m["avg_volume"] = float(df["Volume"].dropna().mean())
                 else:
@@ -161,7 +307,6 @@ class AnalysisPipeline:
                 m["company_name"] = info.get("company_name", sym)
                 m["sector"]       = info.get("sector", "Unknown")
                 m["data_mode"]    = cfg.data_mode
-                # latest_price
                 col = "Close" if "Close" in df.columns else df.columns[0]
                 m["latest_price"] = round(float(df[col].dropna().iloc[-1]), 2)
                 metrics_list.append(m)
@@ -215,23 +360,32 @@ class AnalysisPipeline:
             logger.error("[Stage 7] BFS/DFS failed: %s", exc)
 
         # ── Stage 8: Connected components + graph stats ────────────────────
+        graph_stats = {}
+        components = []
+        strong_rels = []
         try:
             from backend.core.graph import connected_components_from_scratch, calculate_graph_statistics, get_strong_relationships
             if adj:
                 components = connected_components_from_scratch(adj)
-                stats      = calculate_graph_statistics(adj, valid_symbols)
-                strong     = get_strong_relationships(adj, top_n=10)
-                result["graph_stats"]         = stats
+                graph_stats = calculate_graph_statistics(adj, valid_symbols)
+                strong_rels = get_strong_relationships(adj, top_n=10)
+                result["graph_stats"]         = graph_stats
                 result["connected_components"] = components
-                result["strong_relationships"] = strong
+                result["strong_relationships"] = strong_rels
                 logger.info("[Stage 8] Components: %d", len(components))
         except Exception as exc:
             logger.error("[Stage 8] Components failed: %s", exc)
-            result.setdefault("graph_stats", {
+            graph_stats = {
                 "num_vertices": len(valid_symbols), "num_edges": 0,
                 "avg_degree": 0.0, "max_degree": 0, "density": 0.0,
                 "connected_components": 0, "most_connected_stock": "",
-            })
+            }
+            result.setdefault("graph_stats", graph_stats)
+
+        # Network conclusion
+        result["network_conclusion"] = _generate_network_conclusion(
+            graph_stats, strong_rels, components, metrics_list
+        )
 
         # ── Stage 9: Welsh-Powell coloring ────────────────────────────────
         coloring_dict: dict[str, int] = {}
@@ -328,13 +482,27 @@ class AnalysisPipeline:
         try:
             from backend.core.combinatorics import select_candidate_pool, generate_combinations, combination_count, format_combinatorics_display
             if metrics_list:
-                pool           = select_candidate_pool(metrics_list, pool_size=15)
-                candidates, total_possible = generate_combinations(pool, cfg.portfolio_k, max_combinations=1500)
+                # Dynamically adjust pool size: for large universes use smart filtering
+                n_stocks = len(metrics_list)
+                if n_stocks > 30:
+                    pool_size = 20  # Top 20 by Sharpe for large universes
+                    max_combos = 3000
+                elif n_stocks > 15:
+                    pool_size = 15
+                    max_combos = 2000
+                else:
+                    pool_size = n_stocks
+                    max_combos = 2000
+
+                pool           = select_candidate_pool(metrics_list, pool_size=pool_size)
+                candidates, total_possible = generate_combinations(pool, cfg.portfolio_k, max_combinations=max_combos)
                 combo_display  = format_combinatorics_display(len(pool), cfg.portfolio_k, len(candidates), total_possible)
                 result["candidate_pool"]            = pool
+                result["candidate_pool_size"]        = len(pool)
                 result["combinatorics"]             = combo_display
                 result["total_portfolios_evaluated"] = len(candidates)
-                logger.info("[Stage 14] C(%d,%d): %d candidates", len(pool), cfg.portfolio_k, len(candidates))
+                logger.info("[Stage 14] C(%d,%d): %d candidates (pool=%d)",
+                            len(pool), cfg.portfolio_k, len(candidates), pool_size)
         except Exception as exc:
             logger.error("[Stage 14] Combinatorics failed: %s", exc)
             result.setdefault("total_portfolios_evaluated", 0)
@@ -364,6 +532,15 @@ class AnalysisPipeline:
             result.setdefault("top_portfolios", [])
             result.setdefault("all_portfolios", [])
             result.setdefault("top_dm_score", 0.0)
+
+        # ── Stage 16: Sector Analysis ─────────────────────────────────────
+        try:
+            sector_analysis = _compute_sector_analysis(metrics_list, corr_df, adj, cfg.corr_threshold)
+            result["sector_analysis"] = sector_analysis
+            logger.info("[Stage 16] Sector analysis: %d sectors", len(sector_analysis))
+        except Exception as exc:
+            logger.error("[Stage 16] Sector analysis failed: %s", exc)
+            result.setdefault("sector_analysis", [])
 
         logger.info("Pipeline complete [%s]: %d stocks, %d portfolios scored",
                     self.analysis_id, len(metrics_list), len(result.get("all_portfolios", [])))

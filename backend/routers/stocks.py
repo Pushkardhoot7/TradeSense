@@ -42,8 +42,18 @@ def _ensure_metrics():
 @router.get("/sectors")
 def get_sectors():
     universe = _load_universe()
-    sectors = sorted({s["sector"] for s in universe if s["sector"]})
-    return {"sectors": sectors}
+    sector_counts = {}
+    for s in universe:
+        sec = s.get("sector")
+        if sec:
+            sector_counts[sec] = sector_counts.get(sec, 0) + 1
+    sectors_list = [{"name": s, "count": count} for s, count in sorted(sector_counts.items())]
+    return {
+        "sectors": sorted(sector_counts.keys()),
+        "sector_details": sectors_list,
+        "total_sectors": len(sector_counts),
+        "total_stocks": len(universe)
+    }
 
 
 @router.get("")
