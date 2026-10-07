@@ -76,13 +76,15 @@ window.TradeSense = (function() {
     if (icon) icon.classList.add('animate-spin');
     try {
       const mode = (document.getElementById('ctrl-mode')?.value || 'LIVE');
-      const sector = (document.getElementById('ctrl-sector')?.value || 'All Sectors');
+      const sector = (document.getElementById('ctrl-sector')?.value || document.getElementById('lab-sector')?.value || 'All Sectors');
+      const period = (document.getElementById('ctrl-period')?.value || document.getElementById('lab-period')?.value || '1y');
       const threshold = parseFloat(document.getElementById('ctrl-threshold')?.value || 0.70);
-      const k = parseInt(document.getElementById('ctrl-k')?.value || 3);
+      const k = parseInt(document.getElementById('ctrl-k')?.value || document.getElementById('lab-k')?.value || 3);
       
       const res = await apiCall('/api/refresh', 'POST', {
         data_mode: mode,
         sector: sector,
+        period: period,
         corr_threshold: threshold,
         portfolio_k: k
       });

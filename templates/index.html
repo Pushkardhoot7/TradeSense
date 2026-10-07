@@ -72,6 +72,20 @@
         </select>
       </div>
 
+      <!-- Holding Horizon / Period -->
+      <div class="flex items-center gap-2">
+        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Holding Horizon:</label>
+        <select id="ctrl-period" onchange="runAnalysis()" class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-indigo-600 font-mono">
+          <option value="1m">1 Month (30 Days)</option>
+          <option value="3m">3 Months (90 Days)</option>
+          <option value="6m">6 Months (180 Days)</option>
+          <option value="1y" selected>1 Year (365 Days)</option>
+          <option value="2y">2 Years (730 Days)</option>
+          <option value="3y">3 Years (3 Years)</option>
+          <option value="5y">5 Years (5 Years)</option>
+        </select>
+      </div>
+
       <!-- Mode Toggle -->
       <div class="flex items-center gap-2">
         <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Data Source:</label>
@@ -498,6 +512,9 @@ function renderDashboardTop3(top3) {
     { title: 'Rank #3 — Conservative Pick', medal: '🥉', border: 'border-amber-700/40 bg-amber-900/5', badge: 'bg-amber-700/20 text-amber-900', scoreColor: 'text-amber-800' }
   ];
 
+  const periodEl = document.getElementById('ctrl-period');
+  const periodText = periodEl ? periodEl.options[periodEl.selectedIndex].text.split('(')[0].trim() : '1 Year';
+
   container.innerHTML = top3.map((p, idx) => {
     const style = ranks[idx] || ranks[0];
     const constituents = Array.isArray(p.portfolio) ? p.portfolio : [];
@@ -537,7 +554,7 @@ function renderDashboardTop3(top3) {
 
           <div class="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-100 font-sans">
             <div>
-              <span class="text-slate-400">Exp. Return:</span>
+              <span class="text-slate-400">Exp. Return (${periodText}):</span>
               <span class="font-bold text-emerald-600 ml-1">+${(p.raw_return || 0).toFixed(1)}%</span>
             </div>
             <div>
@@ -769,6 +786,7 @@ async function runAnalysis() {
   if (spinner) spinner.classList.add('animate-spin');
   try {
     const sector = document.getElementById('ctrl-sector')?.value || 'All Sectors';
+    const period = document.getElementById('ctrl-period')?.value || '1y';
     const corr_threshold = parseFloat(document.getElementById('ctrl-threshold')?.value || 0.70);
     const portfolio_k = parseInt(document.getElementById('ctrl-k')?.value || 3);
     const data_mode = document.getElementById('ctrl-mode')?.value || 'LIVE';
@@ -776,6 +794,7 @@ async function runAnalysis() {
     await TradeSense.apiCall('/api/analyze', 'POST', {
       data_mode: data_mode,
       sector: sector,
+      period: period,
       corr_threshold: corr_threshold,
       portfolio_k: portfolio_k
     });
