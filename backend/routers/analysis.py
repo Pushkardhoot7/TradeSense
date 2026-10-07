@@ -82,7 +82,7 @@ def get_sectors_analysis():
     global _last_result
     if not _last_result or "sector_analysis" not in _last_result:
         try:
-            res = AnalysisPipeline(AnalyzeRequest(data_mode="HISTORICAL")).run()
+            res = AnalysisPipeline(AnalyzeRequest(data_mode="LIVE")).run()
             _last_result.update(res)
         except Exception:
             res = AnalysisPipeline(AnalyzeRequest(data_mode="DEMO")).run()
@@ -100,7 +100,7 @@ def get_data_quality():
     global _last_result
     if not _last_result:
         try:
-            res = AnalysisPipeline(AnalyzeRequest(data_mode="HISTORICAL")).run()
+            res = AnalysisPipeline(AnalyzeRequest(data_mode="LIVE")).run()
             _last_result.update(res)
         except Exception:
             res = AnalysisPipeline(AnalyzeRequest(data_mode="DEMO")).run()
@@ -125,8 +125,20 @@ def correlation():
     corr = _last_result.get("correlation_matrix", {})
     stats = _last_result.get("correlation_stats", {})
     validation = _last_result.get("matrix_validation", {})
-    return {"matrix": corr, "stats": stats, "validation": validation,
-            "tickers": _last_result.get("tickers", [])}
+    corr_df = _last_result.get("correlation_matrix_df")
+    
+    strong_pairs = []
+    if corr_df is not None and not corr_df.empty:
+        from backend.core.matrix import extract_upper_triangle
+        strong_pairs = extract_upper_triangle(corr_df)
+    
+    return {
+        "matrix": corr,
+        "stats": stats,
+        "validation": validation,
+        "tickers": _last_result.get("tickers", []),
+        "strong_pairs": strong_pairs,
+    }
 
 
 @router.get("/graph")

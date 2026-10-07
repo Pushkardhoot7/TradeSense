@@ -48,10 +48,6 @@
         <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Sector Filter</label>
         <select id="live-sector-filter" onchange="filterStocks()" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700 outline-none">
           <option value="ALL">All Sectors</option>
-          <option value="Information Technology">Information Technology</option>
-          <option value="Banking & Finance">Banking & Finance</option>
-          <option value="Energy & Conglomerate">Energy & Conglomerate</option>
-          <option value="Automobile">Automobile</option>
         </select>
       </div>
       <div>
@@ -142,19 +138,44 @@ let nonDominatedSet = new Set();
 
 async function loadMarketData() {
   try {
-    const res = await TradeSense.apiCall('/api/correlation');
-    const stocksRes = await TradeSense.apiCall('/api/stocks');
-    const coloringRes = await TradeSense.apiCall('/api/coloring');
-    const relationRes = await TradeSense.apiCall('/api/relation');
+    const [stocksRes, coloringRes, relationRes] = await Promise.all([
+      TradeSense.apiCall('/api/stocks'),
+      TradeSense.apiCall('/api/coloring'),
+      TradeSense.apiCall('/api/relation')
+    ]);
 
     colorMap = coloringRes?.coloring_dict || {};
     nonDominatedSet = new Set(relationRes?.non_dominated || []);
-    currentStocks = stocksRes || [];
+    currentStocks = stocksRes?.stocks || (Array.isArray(stocksRes) ? stocksRes : []);
+
+    // Dynamically populate sectors dropdown
+    const sectorFilter = document.getElementById('live-sector-filter');
+    if (sectorFilter) {
+      const currentVal = sectorFilter.value;
+      const sectors = [...new Set(currentStocks.map(s => s.sector).filter(Boolean))].sort();
+      sectorFilter.innerHTML = '<option value="ALL">All Sectors</option>' + 
+        sectors.map(sec => `<option value="${sec}">${sec}</option>`).join('');
+      if (currentVal && sectors.includes(currentVal)) {
+        sectorFilter.value = currentVal;
+      }
+    }
 
     // Update stats
     document.getElementById('stat-stocks').textContent = currentStocks.length || 12;
     document.getElementById('stat-colors').textContent = Object.keys(coloringRes?.color_groups || {}).length || 3;
     document.getElementById('stat-nondom').textContent = nonDominatedSet.size || 4;
+
+    const validReturns = currentStocks.map(s => s.return_pct).filter(r => r != null);
+    const validRisks = currentStocks.map(s => s.risk_pct).filter(r => r != null);
+    if (validReturns.length > 0) {
+      const avgRet = validReturns.reduce((a, b) => a + b, 0) / validReturns.length;
+      document.getElementById('stat-avg-ret').textContent = (avgRet >= 0 ? '+' : '') + avgRet.toFixed(1) + '%';
+      document.getElementById('stat-avg-ret').className = `text-2xl font-black ${avgRet >= 0 ? 'text-emerald-600' : 'text-rose-600'} mt-1`;
+    }
+    if (validRisks.length > 0) {
+      const avgRisk = validRisks.reduce((a, b) => a + b, 0) / validRisks.length;
+      document.getElementById('stat-avg-vol').textContent = avgRisk.toFixed(1) + '%';
+    }
 
     filterStocks();
   } catch(e) {

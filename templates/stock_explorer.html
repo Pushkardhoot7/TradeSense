@@ -510,43 +510,51 @@ async function renderStockNews(symbol) {
 }
 
 async function loadTechnicalsAndFundamentals(symbol) {
+  // Set initial loading states
+  ['tech-rsi', 'tech-sma20', 'tech-ema20', 'tech-macd', 'tech-bb-upper', 'tech-atr'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = 'Loading...';
+  });
+  const rsiCond = document.getElementById('tech-rsi-cond');
+  if (rsiCond) rsiCond.textContent = 'Fetching historical bars...';
+
   try {
     const [techRes, fundRes] = await Promise.all([
       TradeSense.apiCall(`/api/stocks/${encodeURIComponent(symbol)}/technicals?period=6mo`).catch(() => null),
       TradeSense.apiCall(`/api/stocks/${encodeURIComponent(symbol)}/fundamentals`).catch(() => null)
     ]);
 
-    // Populate Technicals with safe fallback
-    if (techRes && techRes.latest && techRes.status !== 'unavailable') {
+    // Populate Technicals
+    if (techRes && techRes.latest && techRes.status !== 'unavailable' && techRes.latest.rsi != null) {
       const t = techRes.latest;
-      document.getElementById('tech-rsi').textContent = t.rsi != null ? t.rsi.toFixed(1) : '—';
-      document.getElementById('tech-rsi-cond').textContent = t.rsi_condition || '—';
-      document.getElementById('tech-sma20').textContent = t.sma20 ? `₹${t.sma20.toFixed(1)}` : '—';
-      document.getElementById('tech-sma50').textContent = t.sma50 ? `SMA50: ₹${t.sma50.toFixed(1)}` : 'SMA50: —';
-      document.getElementById('tech-ema20').textContent = t.ema20 ? `₹${t.ema20.toFixed(1)}` : '—';
-      document.getElementById('tech-ema50').textContent = t.ema50 ? `EMA50: ₹${t.ema50.toFixed(1)}` : 'EMA50: —';
-      document.getElementById('tech-macd').textContent = t.macd ? t.macd.toFixed(2) : '—';
-      document.getElementById('tech-macd-hist').textContent = t.macd_hist ? `Hist: ${t.macd_hist.toFixed(2)}` : 'Hist: —';
-      document.getElementById('tech-bb-upper').textContent = t.bb_upper ? `₹${t.bb_upper.toFixed(1)}` : '—';
-      document.getElementById('tech-bb-lower').textContent = t.bb_lower ? `Lower: ₹${t.bb_lower.toFixed(1)}` : 'Lower: —';
-      document.getElementById('tech-atr').textContent = t.atr ? `ATR: ₹${t.atr.toFixed(1)}` : '—';
-      document.getElementById('tech-vwap').textContent = t.vwap ? `VWAP: ₹${t.vwap.toFixed(1)}` : 'VWAP: —';
+      document.getElementById('tech-rsi').textContent = t.rsi != null ? t.rsi.toFixed(1) : 'Data unavailable';
+      document.getElementById('tech-rsi-cond').textContent = t.rsi_condition || 'Normal Range';
+      document.getElementById('tech-sma20').textContent = t.sma20 ? `₹${t.sma20.toFixed(1)}` : 'Data unavailable';
+      document.getElementById('tech-sma50').textContent = t.sma50 ? `SMA50: ₹${t.sma50.toFixed(1)}` : 'SMA50: Data unavailable';
+      document.getElementById('tech-ema20').textContent = t.ema20 ? `₹${t.ema20.toFixed(1)}` : 'Data unavailable';
+      document.getElementById('tech-ema50').textContent = t.ema50 ? `EMA50: ₹${t.ema50.toFixed(1)}` : 'EMA50: Data unavailable';
+      document.getElementById('tech-macd').textContent = t.macd != null ? t.macd.toFixed(2) : 'Data unavailable';
+      document.getElementById('tech-macd-hist').textContent = t.macd_hist != null ? `Hist: ${t.macd_hist.toFixed(2)}` : 'Hist: Data unavailable';
+      document.getElementById('tech-bb-upper').textContent = t.bb_upper ? `₹${t.bb_upper.toFixed(1)}` : 'Data unavailable';
+      document.getElementById('tech-bb-lower').textContent = t.bb_lower ? `Lower: ₹${t.bb_lower.toFixed(1)}` : 'Lower: Data unavailable';
+      document.getElementById('tech-atr').textContent = t.atr ? `ATR: ₹${t.atr.toFixed(1)}` : 'Data unavailable';
+      document.getElementById('tech-vwap').textContent = t.vwap ? `VWAP: ₹${t.vwap.toFixed(1)}` : 'VWAP: Data unavailable';
 
       // Render Technical Plotly Chart
       renderTechChart(techRes.series, symbol);
     } else {
-      document.getElementById('tech-rsi').textContent = '—';
-      document.getElementById('tech-rsi-cond').textContent = 'Unavailable with current data source';
-      document.getElementById('tech-sma20').textContent = '—';
-      document.getElementById('tech-sma50').textContent = 'SMA50: —';
-      document.getElementById('tech-ema20').textContent = '—';
-      document.getElementById('tech-ema50').textContent = 'EMA50: —';
-      document.getElementById('tech-macd').textContent = '—';
-      document.getElementById('tech-macd-hist').textContent = 'Hist: —';
-      document.getElementById('tech-bb-upper').textContent = '—';
-      document.getElementById('tech-bb-lower').textContent = 'Lower: —';
-      document.getElementById('tech-atr').textContent = '—';
-      document.getElementById('tech-vwap').textContent = 'VWAP: —';
+      document.getElementById('tech-rsi').textContent = 'Data unavailable';
+      document.getElementById('tech-rsi-cond').textContent = 'Data unavailable';
+      document.getElementById('tech-sma20').textContent = 'Data unavailable';
+      document.getElementById('tech-sma50').textContent = 'SMA50: Data unavailable';
+      document.getElementById('tech-ema20').textContent = 'Data unavailable';
+      document.getElementById('tech-ema50').textContent = 'EMA50: Data unavailable';
+      document.getElementById('tech-macd').textContent = 'Data unavailable';
+      document.getElementById('tech-macd-hist').textContent = 'Hist: Data unavailable';
+      document.getElementById('tech-bb-upper').textContent = 'Data unavailable';
+      document.getElementById('tech-bb-lower').textContent = 'Lower: Data unavailable';
+      document.getElementById('tech-atr').textContent = 'Data unavailable';
+      document.getElementById('tech-vwap').textContent = 'VWAP: Data unavailable';
     }
 
     // Populate Fundamentals
@@ -555,24 +563,29 @@ async function loadTechnicalsAndFundamentals(symbol) {
       const p = fundRes.profitability || {};
       const f = fundRes.financial_health || {};
 
-      document.getElementById('fund-pe').textContent = v.pe_ratio != null ? `${v.pe_ratio}x` : '—';
-      document.getElementById('fund-pb').textContent = v.pb_ratio != null ? `${v.pb_ratio}x` : '—';
-      document.getElementById('fund-ev').textContent = v.ev_ebitda != null ? `${v.ev_ebitda}x` : '—';
-      document.getElementById('fund-mcap').textContent = v.market_cap ? `₹${(v.market_cap / 1e7).toFixed(0)} Cr` : '—';
+      document.getElementById('fund-pe').textContent = v.pe_ratio != null ? `${v.pe_ratio}x` : 'Data unavailable';
+      document.getElementById('fund-pb').textContent = v.pb_ratio != null ? `${v.pb_ratio}x` : 'Data unavailable';
+      document.getElementById('fund-ev').textContent = v.ev_ebitda != null ? `${v.ev_ebitda}x` : 'Data unavailable';
+      document.getElementById('fund-mcap').textContent = v.market_cap ? `₹${(v.market_cap / 1e7).toFixed(0)} Cr` : 'Data unavailable';
 
-      document.getElementById('fund-roe').textContent = p.roe_pct != null ? `${p.roe_pct}%` : '—';
-      document.getElementById('fund-roa').textContent = p.roa_pct != null ? `${p.roa_pct}%` : '—';
-      document.getElementById('fund-net-margin').textContent = p.net_margin_pct != null ? `${p.net_margin_pct}%` : '—';
-      document.getElementById('fund-op-margin').textContent = p.operating_margin_pct != null ? `${p.operating_margin_pct}%` : '—';
+      document.getElementById('fund-roe').textContent = p.roe_pct != null ? `${p.roe_pct}%` : 'Data unavailable';
+      document.getElementById('fund-roa').textContent = p.roa_pct != null ? `${p.roa_pct}%` : 'Data unavailable';
+      document.getElementById('fund-net-margin').textContent = p.net_margin_pct != null ? `${p.net_margin_pct}%` : 'Data unavailable';
+      document.getElementById('fund-op-margin').textContent = p.operating_margin_pct != null ? `${p.operating_margin_pct}%` : 'Data unavailable';
 
-      document.getElementById('fund-de').textContent = f.debt_to_equity != null ? `${f.debt_to_equity}` : '—';
-      document.getElementById('fund-current-ratio').textContent = f.current_ratio != null ? `${f.current_ratio}` : '—';
-      document.getElementById('fund-quick-ratio').textContent = f.quick_ratio != null ? `${f.quick_ratio}` : '—';
-      document.getElementById('fund-div-yield').textContent = f.dividend_yield_pct != null ? `${f.dividend_yield_pct}%` : '0.0%';
+      document.getElementById('fund-de').textContent = f.debt_to_equity != null ? `${f.debt_to_equity}` : 'Data unavailable';
+      document.getElementById('fund-current-ratio').textContent = f.current_ratio != null ? `${f.current_ratio}` : 'Data unavailable';
+      document.getElementById('fund-quick-ratio').textContent = f.quick_ratio != null ? `${f.quick_ratio}` : 'Data unavailable';
+      document.getElementById('fund-div-yield').textContent = f.dividend_yield_pct != null ? `${f.dividend_yield_pct}%` : 'Data unavailable';
     }
   } catch(e) {
     console.error("Error loading technicals/fundamentals:", e);
-    document.getElementById('tech-rsi-cond').textContent = 'Unavailable with current data source';
+    ['tech-rsi', 'tech-sma20', 'tech-ema20', 'tech-macd', 'tech-bb-upper', 'tech-atr'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = 'Data unavailable';
+    });
+    const rsiCond = document.getElementById('tech-rsi-cond');
+    if (rsiCond) rsiCond.textContent = 'Data unavailable';
   }
 }
 

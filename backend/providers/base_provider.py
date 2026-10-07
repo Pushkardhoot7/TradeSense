@@ -135,18 +135,21 @@ class MarketDataProvider(ABC):
             e.g. ``"2024-01-15 15:30:00 IST"``
         """
 
-    @abstractmethod
-    def search_symbols(self, query: str) -> list[dict]:
-        """Search for ticker symbols matching *query*.
+    def get_bulk_historical_data(
+        self,
+        symbols: list[str],
+        start: str,
+        end: str,
+        interval: str = "1d",
+    ) -> dict[str, pd.DataFrame]:
+        """Fetch historical data for multiple symbols, returning {symbol: DataFrame}."""
+        res: dict[str, pd.DataFrame] = {}
+        for s in symbols:
+            try:
+                df = self.get_historical_data(s, start, end, interval)
+                if not df.empty:
+                    res[s] = df
+            except Exception:
+                pass
+        return res
 
-        Parameters
-        ----------
-        query:
-            Free-text search string (e.g. ``"Infosys"`` or ``"INFY"``).
-
-        Returns
-        -------
-        list[dict]
-            Each element contains at minimum:
-            ``{'symbol': str, 'name': str, 'exchange': str}``.
-        """

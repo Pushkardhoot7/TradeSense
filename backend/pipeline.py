@@ -13,7 +13,7 @@ import csv
 import logging
 import uuid
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -34,7 +34,7 @@ _PERIOD_DAYS: dict[str, int] = {
 
 def _period_to_dates(period: str) -> tuple[str, str]:
     days = _PERIOD_DAYS.get(period, 365)
-    end_dt   = datetime.utcnow()
+    end_dt   = datetime.now(timezone.utc)
     start_dt = end_dt - timedelta(days=days)
     return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
 
@@ -213,7 +213,8 @@ class AnalysisPipeline:
             "sector":        cfg.sector,
             "period":        cfg.period,
             "corr_threshold": cfg.corr_threshold,
-            "created_at":    datetime.utcnow().isoformat(),
+            "created_at":    datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%H:%M:%S"),
+            "last_updated":  datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%H:%M:%S"),
         }
 
         # ── Stage 1: Provider ──────────────────────────────────────────────
@@ -223,9 +224,10 @@ class AnalysisPipeline:
                 from backend.providers.demo_provider import DemoDataProvider
                 provider = DemoDataProvider()
             else:
-                from backend.providers.yfinance_provider import YFinanceProvider
-                provider = YFinanceProvider()
+                from backend.providers.live_provider import LiveDataProvider
+                provider = LiveDataProvider()
             result["provider_label"] = provider.data_mode_label
+            result["last_updated"] = provider.get_last_updated()
             logger.info("[Stage 1] Provider: %s", provider.data_mode_label)
         except Exception as exc:
             logger.error("[Stage 1] Provider init failed: %s", exc)
@@ -253,23 +255,38 @@ class AnalysisPipeline:
         result["tickers"] = symbols
         result["universe_total"] = len(symbols)
 
-        # ── Stage 3: Historical price data ────────────────────────────────
+        # ── Stage 3: Live & Historical price data ─────────────────────────
         price_data: dict[str, pd.DataFrame] = {}
         start_date, end_date = _period_to_dates(cfg.period)
         failed_symbols: list[str] = []
         if provider:
-            for sym in symbols:
-                try:
-                    df = provider.get_historical_data(sym, start_date, end_date, "1d")
-                    if not df.empty:
-                        price_data[sym] = df
-                except Exception as sym_exc:
-                    failed_symbols.append(sym)
-                    logger.warning("[Stage 3] No data for %s: %s", sym, sym_exc)
+            if hasattr(provider, "get_bulk_historical_data"):
+                price_data = provider.get_bulk_historical_data(symbols, start_date, end_date, "1d")
+                failed_symbols = [s for s in symbols if s not in price_data]
+            else:
+                for sym in symbols:
+                    try:
+                        df = provider.get_historical_data(sym, start_date, end_date, "1d")
+                        if not df.empty:
+                            price_data[sym] = df
+                    except Exception as sym_exc:
+                        failed_symbols.append(sym)
+                        logger.warning("[Stage 3] No data for %s: %s", sym, sym_exc)
+
         valid_symbols = list(price_data.keys())
         result["tickers"] = valid_symbols
         result["failed_symbols"] = failed_symbols
         logger.info("[Stage 3] Price data: %d stocks (%d failed)", len(valid_symbols), len(failed_symbols))
+
+        # Check live data availability
+        if not price_data:
+            result["data_mode"] = "UNAVAILABLE"
+            result["provider_label"] = "Live data unavailable"
+            result["live_available"] = False
+        else:
+            result["data_mode"] = "LIVE"
+            result["provider_label"] = "● LIVE • NSE"
+            result["live_available"] = True
 
         # Data quality
         result["data_quality"] = _compute_data_quality(
@@ -277,7 +294,8 @@ class AnalysisPipeline:
             missing_data_pct=len(failed_symbols) / max(len(symbols), 1) * 100
         )
 
-        # Save price history for /stock/{symbol}/history endpoint
+        # Save price history for /stock/{symbol}/history endpoint and technicals
+        result["price_data"] = price_data
         price_history: dict[str, list] = {}
         for sym, df in price_data.items():
             col = "Close" if "Close" in df.columns else df.columns[0]
@@ -497,10 +515,13 @@ class AnalysisPipeline:
                 pool           = select_candidate_pool(metrics_list, pool_size=pool_size)
                 candidates, total_possible = generate_combinations(pool, cfg.portfolio_k, max_combinations=max_combos)
                 combo_display  = format_combinatorics_display(len(pool), cfg.portfolio_k, len(candidates), total_possible)
-                result["candidate_pool"]            = pool
+                result["candidate_pool"]             = pool
                 result["candidate_pool_size"]        = len(pool)
-                result["combinatorics"]             = combo_display
+                result["combinatorics"]              = combo_display
                 result["total_portfolios_evaluated"] = len(candidates)
+                result["stocks_available"]           = len(metrics_list)
+                result["portfolio_size"]             = cfg.portfolio_k
+                result["candidates_evaluated"]       = len(candidates)
                 logger.info("[Stage 14] C(%d,%d): %d candidates (pool=%d)",
                             len(pool), cfg.portfolio_k, len(candidates), pool_size)
         except Exception as exc:

@@ -197,8 +197,15 @@ def market_indices():
 @router.get("/overview")
 def market_overview():
     from backend.routers.analysis import _last_result
+    from backend.pipeline import AnalysisPipeline
+    from backend.schemas import AnalyzeRequest
     if not _last_result:
-        return {"message": "Run /api/analyze first to populate market data."}
+        try:
+            res = AnalysisPipeline(AnalyzeRequest(data_mode="HISTORICAL")).run()
+            _last_result.update(res)
+        except Exception:
+            res = AnalysisPipeline(AnalyzeRequest(data_mode="DEMO")).run()
+            _last_result.update(res)
     r = _last_result
     return {
         "stocks_analyzed": r.get("stocks_analyzed", 0),
@@ -207,9 +214,10 @@ def market_overview():
         "color_groups": r.get("num_color_groups", 0),
         "portfolios_evaluated": r.get("total_portfolios_evaluated", 0),
         "top_dm_score": r.get("top_dm_score", 0.0),
-        "data_mode": r.get("data_mode", "HISTORICAL"),
+        "data_mode": r.get("data_mode", "LIVE"),
         "period": r.get("period", "1y"),
-        "last_updated": r.get("created_at", ""),
+        "created_at": r.get("created_at", datetime.now().strftime("%H:%M:%S")),
+        "last_updated": r.get("last_updated", datetime.now().strftime("%H:%M:%S")),
         "data_quality": r.get("data_quality", {}),
         "network_conclusion": r.get("network_conclusion", {}),
         "all_sectors": r.get("all_sectors", []),

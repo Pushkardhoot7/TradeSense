@@ -76,7 +76,7 @@
       <div class="flex items-center gap-2">
         <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Data Source:</label>
         <select id="ctrl-mode" onchange="runAnalysis()" class="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-indigo-600">
-          <option value="HISTORICAL" selected>Live / Historical (NSE)</option>
+          <option value="LIVE" selected>● Live NSE Data</option>
           <option value="DEMO">Demo Simulation</option>
         </select>
       </div>
@@ -613,12 +613,16 @@ function renderSectorAnalysisTable(sectors, insights) {
     const corr = sec.avg_correlation || 0;
     const density = sec.network_density || 0;
     const score = sec.model_score || 0;
-    const best = sec.leading_stock || '—';
+    const stockCount = sec.stocks_analyzed || sec.stock_count || 0;
+    // Derive leading stock: first symbol in the sector's stock list (stripped of .NS)
+    const symbols = sec.stock_symbols || [];
+    const best = symbols.length > 0 ? symbols[0] : '—';
+    const bestDisplay = best.replace('.NS', '');
 
     return `
       <tr class="hover:bg-slate-50 transition-colors">
         <td class="py-2.5 px-3 font-bold font-sans text-slate-800">${sec.sector}</td>
-        <td class="py-2.5 px-3 text-center text-slate-600 font-bold">${sec.stock_count}</td>
+        <td class="py-2.5 px-3 text-center text-slate-600 font-bold">${stockCount}</td>
         <td class="py-2.5 px-3 text-right font-bold ${ret >= 0 ? 'text-emerald-600' : 'text-rose-600'}">
           ${ret >= 0 ? '+' : ''}${ret.toFixed(1)}%
         </td>
@@ -627,7 +631,7 @@ function renderSectorAnalysisTable(sectors, insights) {
         <td class="py-2.5 px-3 text-right text-indigo-600">${(density * 100).toFixed(0)}%</td>
         <td class="py-2.5 px-3 text-right font-bold text-indigo-700">${score.toFixed(1)}</td>
         <td class="py-2.5 px-3 text-center font-bold text-slate-800">
-          <a href="/stock/${encodeURIComponent(best)}" class="text-indigo-600 hover:underline">${best}</a>
+          <a href="/stock/${encodeURIComponent(best)}" class="text-indigo-600 hover:underline">${bestDisplay}</a>
         </td>
         <td class="py-2.5 px-3 text-right font-sans">
           <button onclick="filterBySector('${sec.sector}')" class="text-xs text-indigo-600 font-bold hover:underline cursor-pointer">
@@ -642,8 +646,12 @@ function renderSectorAnalysisTable(sectors, insights) {
   if (insightEl) {
     if (insights && insights.length > 0) {
       insightEl.innerHTML = insights.map(i => `• ${i}`).join('<br>');
-    } else {
-      insightEl.textContent = 'Co-movement is moderately balanced across the analyzed sectors, with differentiated performance in Technology, Financials, and Energy.';
+    } else if (sectors.length > 0) {
+      // Generate dynamic insight from sector data
+      const sorted = [...sectors].sort((a, b) => (b.model_score || 0) - (a.model_score || 0));
+      const topSector = sorted[0];
+      const lowCorrSec = [...sectors].sort((a, b) => (a.avg_correlation || 0) - (b.avg_correlation || 0))[0];
+      insightEl.textContent = `${topSector.sector} leads with a model score of ${(topSector.model_score || 0).toFixed(1)}, while ${lowCorrSec.sector} offers the best diversification potential with the lowest internal correlation (${(lowCorrSec.avg_correlation || 0).toFixed(2)}).`;
     }
   }
 }
@@ -763,7 +771,7 @@ async function runAnalysis() {
     const sector = document.getElementById('ctrl-sector')?.value || 'All Sectors';
     const corr_threshold = parseFloat(document.getElementById('ctrl-threshold')?.value || 0.70);
     const portfolio_k = parseInt(document.getElementById('ctrl-k')?.value || 3);
-    const data_mode = document.getElementById('ctrl-mode')?.value || 'HISTORICAL';
+    const data_mode = document.getElementById('ctrl-mode')?.value || 'LIVE';
 
     await TradeSense.apiCall('/api/analyze', 'POST', {
       data_mode: data_mode,

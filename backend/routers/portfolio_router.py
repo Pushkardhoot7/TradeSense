@@ -27,7 +27,18 @@ def all_portfolios(limit: int = Query(default=50, le=500)):
         if "portfolio" not in item:
             item["portfolio"] = []
         safe.append(item)
-    return {"portfolios": safe, "total": len(all_p)}
+    return {
+        "portfolios": safe,
+        "total": len(all_p),
+        "stocks_available": r.get("stocks_available", len(r.get("stocks", []))),
+        "portfolio_size": r.get("portfolio_size", 3),
+        "candidate_pool_size": r.get("candidate_pool_size", len(r.get("candidate_pool", []))),
+        "candidates_evaluated": r.get("candidates_evaluated", len(all_p)),
+        "total_evaluated": len(all_p),
+        "combinatorics": r.get("combinatorics", {}),
+        "dm_weights": r.get("dm_weights", {}),
+        "disclaimer": r.get("disclaimer", "")
+    }
 
 
 @router.get("/portfolios/top")

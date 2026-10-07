@@ -2,7 +2,7 @@
 
 {% block title %}Portfolio Lab — Combinatorics & DM Score Ranking{% endblock %}
 {% block page_title %}💼 Portfolio Lab & Combinatorics{% endblock %}
-{% block page_subtitle %}Combinatorial exploration C(n,k), multi-objective DM Portfolio Score, and candidate comparisons{% endblock %}
+{% block page_subtitle %}Combinatorial exploration C(n,k), multi-objective normalized portfolio scoring, and candidate comparisons{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
@@ -14,43 +14,43 @@
     <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div>
-          <h3 class="text-sm font-bold text-slate-900">DM Portfolio Score Architecture</h3>
-          <p class="text-xs text-slate-500 mt-0.5">Project-defined analytical multi-criteria ranking</p>
+          <h3 class="text-sm font-bold text-slate-900">Normalized DM Portfolio Score (0–100)</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Every component is strictly normalized to 0–100 before applying weights</p>
         </div>
-        <span class="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md">5 PILLARS</span>
+        <span class="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md">V2.1 FORMULA</span>
       </div>
 
-      <!-- Formula Pills -->
+      <!-- Formula Pills (5 components) -->
       <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs">
         <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
           <div class="text-[10px] font-bold text-slate-400">Return</div>
           <div class="text-base font-black text-indigo-600 mt-0.5">30%</div>
-          <div class="text-[9px] text-slate-500">CAGR Score</div>
+          <div class="text-[9px] text-slate-500">CAGR Growth</div>
         </div>
         <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-          <div class="text-[10px] font-bold text-slate-400">Risk</div>
+          <div class="text-[10px] font-bold text-slate-400">Risk Efficiency</div>
           <div class="text-base font-black text-purple-600 mt-0.5">25%</div>
           <div class="text-[9px] text-slate-500">Low Volatility</div>
         </div>
         <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-          <div class="text-[10px] font-bold text-slate-400">Correlation</div>
-          <div class="text-base font-black text-emerald-600 mt-0.5">25%</div>
-          <div class="text-[9px] text-slate-500">Pairwise Div</div>
+          <div class="text-[10px] font-bold text-slate-400">Diversification</div>
+          <div class="text-base font-black text-emerald-600 mt-0.5">20%</div>
+          <div class="text-[9px] text-slate-500">Low Correlation</div>
         </div>
         <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-          <div class="text-[10px] font-bold text-slate-400">Groups</div>
-          <div class="text-base font-black text-amber-600 mt-0.5">10%</div>
-          <div class="text-[9px] text-slate-500">Color Clusters</div>
+          <div class="text-[10px] font-bold text-slate-400">Stability</div>
+          <div class="text-base font-black text-amber-600 mt-0.5">15%</div>
+          <div class="text-[9px] text-slate-500">Return Consistency</div>
         </div>
         <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-          <div class="text-[10px] font-bold text-slate-400">Poset</div>
-          <div class="text-base font-black text-rose-600 mt-0.5">10%</div>
-          <div class="text-[9px] text-slate-500">Dominance</div>
+          <div class="text-[10px] font-bold text-slate-400">Network Benefit</div>
+          <div class="text-base font-black text-sky-600 mt-0.5">10%</div>
+          <div class="text-[9px] text-slate-500">Group Coverage</div>
         </div>
       </div>
 
-      <p class="text-xs text-slate-500 leading-relaxed">
-        $\text{DM Score} = 0.30 S_{\text{return}} + 0.25 S_{\text{risk}} + 0.25 S_{\text{div}} + 0.10 S_{\text{group}} + 0.10 S_{\text{dom}}$. Normalised onto $[0, 100]$.
+      <p class="text-xs text-slate-600 leading-relaxed font-mono text-[11px] bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+        Score = 0.30 Return + 0.25 Risk Efficiency + 0.20 Diversification + 0.15 Stability + 0.10 Network Benefit
       </p>
     </div>
 
@@ -63,18 +63,18 @@
 
       <div class="grid grid-cols-2 gap-3 text-center">
         <div class="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
-          <div class="text-[10px] uppercase font-bold text-slate-400">Candidate Universe (n)</div>
-          <div class="text-2xl font-black text-white mt-0.5 font-mono">12 Stocks</div>
+          <div class="text-[10px] uppercase font-bold text-slate-400">Stocks Available (n)</div>
+          <div id="stat-stocks-available" class="text-2xl font-black text-white mt-0.5 font-mono">93 Stocks</div>
         </div>
         <div class="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
           <div class="text-[10px] uppercase font-bold text-slate-400">Portfolio Size (k)</div>
-          <div class="text-2xl font-black text-indigo-400 mt-0.5 font-mono">3 Stocks</div>
+          <div id="stat-portfolio-k" class="text-2xl font-black text-indigo-400 mt-0.5 font-mono">3 Stocks</div>
         </div>
       </div>
 
       <div class="p-3 bg-slate-800/50 rounded-xl flex items-center justify-between text-xs">
-        <span class="text-slate-400">Evaluated Candidates:</span>
-        <span id="total-combos-count" class="font-mono font-black text-amber-400 text-sm">220 Portfolios</span>
+        <span class="text-slate-400">Candidates Evaluated:</span>
+        <span id="total-combos-count" class="font-mono font-black text-amber-400 text-sm">Evaluating...</span>
       </div>
     </div>
 
@@ -85,7 +85,7 @@
     <div class="flex items-center justify-between">
       <div>
         <h3 class="text-base font-bold text-slate-900">Top 3 Automatically Ranked Portfolios</h3>
-        <p class="text-xs text-slate-500">Pure algorithmic selection — never curated or hardcoded</p>
+        <p class="text-xs text-slate-500">Pure algorithmic selection based on 5-component normalized scoring</p>
       </div>
       <span class="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md">
         100% Deterministic Ranking
@@ -100,18 +100,31 @@
     </div>
   </div>
 
-  <!-- Interactive Portfolio Radar Comparison & All Candidates Table -->
+  <!-- Score Comparison Cards & All Candidates Table -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-    <!-- Radar Chart (5 cols) -->
+    <!-- Score Breakdown Comparison Card (5 cols) (Replaces Radar Chart) -->
     <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Radar Score Comparison</h4>
-        <span class="text-[10px] font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded">Rank #1 vs Rank #2</span>
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800">Score Breakdown Comparison</h4>
+          <p class="text-[11px] text-slate-400 mt-0.5">Rank #1 vs Rank #2 component breakdown</p>
+        </div>
+        <span class="text-[10px] font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded">0–100 Scale</span>
       </div>
 
-      <div id="portfolio-radar-plot" class="w-full h-[380px] rounded-xl overflow-hidden">
-        <!-- Plotly radar chart -->
+      <div id="portfolio-score-bars" class="space-y-4">
+        <!-- Rendered via JS -->
+      </div>
+
+      <!-- Why it received this score explanation -->
+      <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+        <div class="font-bold text-slate-800 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+          <span>ℹ️</span> Why This Portfolio Scored High
+        </div>
+        <p id="score-reason-text" class="text-slate-600 text-[11px] leading-relaxed">
+          Evaluating constituent metrics...
+        </p>
       </div>
     </div>
 
@@ -119,21 +132,21 @@
     <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
       <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
         <div>
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">All Candidate Combinations</h4>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800">All Candidate Combinations</h4>
           <p class="text-[11px] text-slate-400">Ranked by overall DM analytical score</p>
         </div>
       </div>
 
-      <div class="overflow-x-auto max-h-[420px] overflow-y-auto">
+      <div class="overflow-x-auto max-h-[460px] overflow-y-auto">
         <table class="w-full text-left text-xs text-slate-700">
           <thead class="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500 font-bold border-b border-slate-200">
             <tr>
               <th class="px-4 py-3">Rank</th>
-              <th class="px-4 py-3">Portfolio Constituents</th>
+              <th class="px-4 py-3">Constituents</th>
               <th class="px-4 py-3 text-right">DM Score</th>
-              <th class="px-4 py-3 text-right">Exp. Return</th>
+              <th class="px-4 py-3 text-right">Return</th>
               <th class="px-4 py-3 text-right">Risk (σ)</th>
-              <th class="px-4 py-3 text-right">Avg Correlation</th>
+              <th class="px-4 py-3 text-right">Avg Corr</th>
             </tr>
           </thead>
           <tbody id="candidates-table-body" class="divide-y divide-slate-100 font-medium">
@@ -158,15 +171,20 @@ async function loadPortfolioLab() {
     const portfolios = res.portfolios || [];
     const top3 = portfolios.slice(0, 3);
 
-    document.getElementById('total-combos-count').textContent = `${res.total_evaluated || portfolios.length || 220} Portfolios`;
+    // Dynamic combinatorics
+    const avail = res.stocks_available || res.candidate_pool_size || 93;
+    const kVal = res.portfolio_size || 3;
+    const evaluated = res.candidates_evaluated || res.total_evaluated || portfolios.length;
+
+    document.getElementById('stat-stocks-available').textContent = `${avail} Stocks`;
+    document.getElementById('stat-portfolio-k').textContent = `${kVal} Stocks`;
+    document.getElementById('total-combos-count').textContent = `${evaluated.toLocaleString()} Candidates`;
 
     // Render Top 3 Cards
     renderTop3Cards(top3);
 
-    // Render Radar comparison
-    if (top3.length >= 2) {
-      TradeSense.renderPortfolioRadar('portfolio-radar-plot', top3[0], top3[1]);
-    }
+    // Render Score Bars comparison (Rank #1 vs Rank #2)
+    renderScoreBarsComparison(top3);
 
     // Render Table
     renderCandidatesTable(portfolios.slice(0, 50));
@@ -189,6 +207,14 @@ function renderTop3Cards(top3) {
     const style = ranks[idx] || ranks[0];
     const constituents = Array.isArray(p.portfolio) ? p.portfolio : [];
 
+    const pillars = [
+      ['Return (30%)', p.return_score, '#4f46e5'],
+      ['Risk Efficiency (25%)', p.risk_score, '#7c3aed'],
+      ['Diversification (20%)', p.diversification_score, '#059669'],
+      ['Stability (15%)', p.stability_score ?? p.dominance_score, '#d97706'],
+      ['Network Benefit (10%)', p.network_score ?? p.group_score, '#0284c7']
+    ];
+
     return `
       <div class="bg-white rounded-2xl border-2 ${style.border} p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4">
         <div class="space-y-3">
@@ -197,16 +223,16 @@ function renderTop3Cards(top3) {
               <span>${style.medal}</span> ${style.title}
             </span>
             <span class="font-mono font-black text-xl ${style.scoreColor}">
-              ${(p.dm_score || 0).toFixed(1)} <span class="text-xs font-bold text-slate-400">DM</span>
+              ${(p.dm_score || 0).toFixed(1)} <span class="text-xs font-bold text-slate-400">/ 100</span>
             </span>
           </div>
 
           <!-- Constituents -->
           <div class="flex flex-wrap gap-1.5 py-1">
             ${constituents.map(s => `
-              <a href="/stock/${encodeURIComponent(s)}" class="px-3 py-1.5 rounded-xl bg-slate-900 text-white font-mono font-bold text-xs hover:bg-indigo-600 transition-colors">
-                ${s}
-              </a>
+              <span class="px-2.5 py-1 rounded-lg bg-slate-900 text-white font-mono font-bold text-xs">
+                ${s.replace('.NS','')}
+              </span>
             `).join('')}
           </div>
 
@@ -227,19 +253,67 @@ function renderTop3Cards(top3) {
           </div>
         </div>
 
-        <!-- Pillar breakdown bar preview -->
-        <div class="space-y-1 text-[10px] text-slate-500 font-medium">
-          <div class="flex justify-between">
-            <span>Diversification Score</span>
-            <span class="font-mono font-bold text-slate-700">${(p.diversification_score || 85).toFixed(0)} / 100</span>
-          </div>
-          <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div class="bg-indigo-600 h-full rounded-full" style="width: ${(p.diversification_score || 85)}%"></div>
-          </div>
+        <!-- 5-Pillar Score Bars -->
+        <div class="space-y-1.5 pt-2 border-t border-slate-100">
+          ${pillars.map(([label, val, col]) => `
+            <div class="flex items-center gap-2 text-[10px]">
+              <span class="text-slate-600 font-medium w-32 truncate">${label}</span>
+              <div class="score-bar flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                <div class="score-bar-fill h-full rounded-full" style="width: ${Math.min(100, Math.max(0, val || 0)).toFixed(1)}%; background-color: ${col}"></div>
+              </div>
+              <span class="font-mono text-slate-700 font-bold w-7 text-right">${val != null ? Number(val).toFixed(0) : '—'}</span>
+            </div>
+          `).join('')}
         </div>
       </div>
     `;
   }).join('');
+}
+
+function renderScoreBarsComparison(top3) {
+  const container = document.getElementById('portfolio-score-bars');
+  if (!container || top3.length === 0) return;
+
+  const p1 = top3[0];
+  const p2 = top3.length > 1 ? top3[1] : top3[0];
+
+  const pillars = [
+    { label: 'Return (30%)', k1: p1.return_score, k2: p2.return_score, col: '#4f46e5' },
+    { label: 'Risk Efficiency (25%)', k1: p1.risk_score, k2: p2.risk_score, col: '#7c3aed' },
+    { label: 'Diversification (20%)', k1: p1.diversification_score, k2: p2.diversification_score, col: '#059669' },
+    { label: 'Stability (15%)', k1: p1.stability_score ?? p1.dominance_score, k2: p2.stability_score ?? p2.dominance_score, col: '#d97706' },
+    { label: 'Network Benefit (10%)', k1: p1.network_score ?? p1.group_score, k2: p2.network_score ?? p2.group_score, col: '#0284c7' }
+  ];
+
+  container.innerHTML = `
+    <div class="flex items-center justify-between text-xs pb-1 font-bold">
+      <span class="text-indigo-600">🥇 Rank #1 (${(p1.portfolio||[]).map(s=>s.replace('.NS','')).join('+')}): ${p1.dm_score.toFixed(1)}</span>
+      <span class="text-slate-500">🥈 Rank #2: ${p2.dm_score.toFixed(1)}</span>
+    </div>
+    <div class="space-y-3 pt-2">
+      ${pillars.map(p => `
+        <div class="space-y-1">
+          <div class="flex justify-between text-[11px] font-semibold text-slate-700">
+            <span>${p.label}</span>
+            <span class="font-mono">#1: <strong>${(p.k1||0).toFixed(0)}</strong> · #2: ${(p.k2||0).toFixed(0)}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div class="h-full rounded-full" style="width: ${Math.min(100, Math.max(0, p.k1||0))}%; background-color: ${p.col}"></div>
+            </div>
+            <div class="bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div class="h-full rounded-full bg-slate-400" style="width: ${Math.min(100, Math.max(0, p.k2||0))}%"></div>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  const reasonEl = document.getElementById('score-reason-text');
+  if (reasonEl) {
+    reasonEl.innerHTML = `Rank #1 scored <strong>${p1.dm_score.toFixed(1)}/100</strong> by pairing an expected return of <strong>+${(p1.raw_return||0).toFixed(1)}%</strong> with tight risk control (<strong>${(p1.raw_risk||0).toFixed(1)}% volatility</strong>) and a low average correlation of <strong>${(p1.avg_correlation||0).toFixed(2)}</strong>, giving it a balanced score across all 5 normalized financial pillars.`;
+  }
 }
 
 function renderCandidatesTable(portfolios) {
@@ -248,20 +322,22 @@ function renderCandidatesTable(portfolios) {
 
   tbody.innerHTML = portfolios.map((p, idx) => `
     <tr class="hover:bg-slate-50/80 transition-colors">
-      <td class="px-4 py-2.5 font-bold font-mono text-slate-800">#${p.rank || idx + 1}</td>
-      <td class="px-4 py-2.5 font-bold font-mono text-indigo-700">
-        ${(p.portfolio || []).join(' + ')}
+      <td class="px-4 py-3 font-mono font-bold ${idx === 0 ? 'text-amber-500' : (idx === 1 ? 'text-slate-600' : (idx === 2 ? 'text-amber-800' : 'text-slate-400'))}">
+        #${p.rank || idx + 1}
       </td>
-      <td class="px-4 py-2.5 text-right font-black font-mono text-slate-900">
+      <td class="px-4 py-3 font-mono font-bold text-slate-800">
+        ${(p.portfolio || []).map(s => s.replace('.NS','')).join(' + ')}
+      </td>
+      <td class="px-4 py-3 text-right font-mono font-black text-indigo-700">
         ${(p.dm_score || 0).toFixed(1)}
       </td>
-      <td class="px-4 py-2.5 text-right font-bold text-emerald-600">
+      <td class="px-4 py-3 text-right font-mono font-bold text-emerald-600">
         +${(p.raw_return || 0).toFixed(1)}%
       </td>
-      <td class="px-4 py-2.5 text-right font-mono text-slate-700">
+      <td class="px-4 py-3 text-right font-mono text-slate-700">
         ${(p.raw_risk || 0).toFixed(1)}%
       </td>
-      <td class="px-4 py-2.5 text-right font-mono text-indigo-600">
+      <td class="px-4 py-3 text-right font-mono text-slate-500">
         ${(p.avg_correlation || 0).toFixed(2)}
       </td>
     </tr>

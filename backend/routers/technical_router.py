@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 from fastapi import APIRouter, HTTPException, Query
+import pandas as pd
 import yfinance as yf
 from backend.core.technical import compute_all_technicals
 
@@ -25,18 +26,30 @@ def get_stock_technicals(symbol: str, period: str = "6mo"):
         return _tech_cache[cache_key][1]
 
     try:
-        df = yf.download(symbol, period=period, progress=False)
-        if df.empty:
+        df = None
+        try:
+            from backend.routers.analysis import _last_result
+            if _last_result and "price_data" in _last_result:
+                cached_df = _last_result["price_data"].get(symbol)
+                if cached_df is not None and not cached_df.empty:
+                    df = cached_df.copy()
+        except Exception:
+            pass
+
+        if df is None or df.empty:
+            df = yf.download(symbol, period=period, progress=False)
+
+        if df is None or df.empty:
             return {
                 "symbol": symbol,
                 "period": period,
                 "status": "unavailable",
-                "message": "Unavailable with current data source",
+                "message": "Data unavailable",
                 "latest": {
                     "close": None,
                     "sma20": None, "sma50": None, "sma200": None,
                     "ema20": None, "ema50": None,
-                    "rsi": None, "rsi_condition": "Unavailable with current data source",
+                    "rsi": None, "rsi_condition": "Data unavailable",
                     "macd": None, "macd_signal": None, "macd_hist": None,
                     "bb_upper": None, "bb_mid": None, "bb_lower": None,
                     "atr": None, "vwap": None,
@@ -44,6 +57,10 @@ def get_stock_technicals(symbol: str, period: str = "6mo"):
                 "series": {"dates": [], "close": []},
                 "disclaimer": "Technical indicators are descriptive historical calculations."
             }
+
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+
         technicals = compute_all_technicals(df)
         technicals["symbol"] = symbol
         technicals["period"] = period

@@ -41,8 +41,8 @@ class AnalyzeRequest(BaseModel):
         description="Portfolio size k for C(n,k) combinatorial generation.",
     )
     data_mode: str = Field(
-        default="HISTORICAL",
-        description="Data source mode: 'HISTORICAL' (yfinance), 'LIVE', 'STALE', 'UNAVAILABLE', or 'DEMO'.",
+        default="LIVE",
+        description="Data source mode: 'LIVE' (Real NSE Data), 'HISTORICAL', 'STALE', 'UNAVAILABLE', or 'DEMO'.",
     )
     return_threshold: float = Field(
         default=5.0,

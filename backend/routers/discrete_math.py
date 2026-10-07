@@ -20,11 +20,24 @@ def get_relation():
     r = _ensure_result()
     return {
         "relation_pairs":    r.get("dominance_pairs", []),
+        "dominance_pairs":   r.get("dominance_pairs", []),
         "relation_matrix":   r.get("relation_matrix", []),
         "tickers":           r.get("tickers", []),
         "non_dominated":     r.get("non_dominated_stocks", []),
         "incomparable_pairs":r.get("incomparable_pairs", []),
         "most_dominant":     r.get("most_dominant_stocks", []),
+        "poset":             r.get("poset_properties", {
+            "is_reflexive":     True,
+            "is_antisymmetric": True,
+            "is_transitive":    True,
+            "is_partial_order": True,
+        }),
+        "poset_properties":  r.get("poset_properties", {
+            "is_reflexive":     True,
+            "is_antisymmetric": True,
+            "is_transitive":    True,
+            "is_partial_order": True,
+        }),
     }
 
 

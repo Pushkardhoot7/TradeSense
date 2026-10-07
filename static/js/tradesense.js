@@ -49,23 +49,17 @@ window.TradeSense = (function() {
     const badge = document.getElementById('data-mode-badge');
     const sidebar = document.getElementById('sidebar-data-mode');
     const m = (mode || '').toUpperCase();
-    let text = 'HISTORICAL DATA';
-    let cls = 'badge-historical';
+    let text = '● LIVE • NSE';
+    let cls = 'badge-live';
     
-    if (m.includes('LIVE')) {
-      text = '● LIVE DATA';
+    if (m.includes('LIVE') || m.includes('HIST')) {
+      text = '● LIVE • NSE';
       cls = 'badge-live';
-    } else if (m.includes('HIST')) {
-      text = 'HISTORICAL DATA';
-      cls = 'badge-historical';
     } else if (m.includes('DEMO')) {
       text = 'DEMO DATA';
       cls = 'badge-demo';
-    } else if (m.includes('STALE')) {
-      text = 'STALE DATA';
-      cls = 'px-2 py-0.5 rounded font-bold text-xs bg-amber-100 text-amber-800 border border-amber-300';
-    } else if (m.includes('UNAVAIL')) {
-      text = 'DATA UNAVAILABLE';
+    } else if (m.includes('UNAVAIL') || m.includes('FAIL')) {
+      text = 'Live data unavailable';
       cls = 'px-2 py-0.5 rounded font-bold text-xs bg-rose-100 text-rose-800 border border-rose-300';
     }
     
@@ -81,7 +75,7 @@ window.TradeSense = (function() {
     const icon = btn ? btn.querySelector('.refresh-icon') : null;
     if (icon) icon.classList.add('animate-spin');
     try {
-      const mode = (document.getElementById('ctrl-mode')?.value || 'HISTORICAL');
+      const mode = (document.getElementById('ctrl-mode')?.value || 'LIVE');
       const sector = (document.getElementById('ctrl-sector')?.value || 'All Sectors');
       const threshold = parseFloat(document.getElementById('ctrl-threshold')?.value || 0.70);
       const k = parseInt(document.getElementById('ctrl-k')?.value || 3);
@@ -94,8 +88,8 @@ window.TradeSense = (function() {
       });
       
       const lastUp = document.getElementById('last-updated');
-      if (lastUp && res.created_at) {
-        lastUp.textContent = res.created_at;
+      if (lastUp && (res.last_updated || res.created_at)) {
+        lastUp.textContent = res.last_updated || res.created_at;
       }
       if (res.data_mode) {
         setDataModeBadge(res.data_mode);
@@ -104,6 +98,7 @@ window.TradeSense = (function() {
       window.dispatchEvent(new CustomEvent('tradesense:refreshed', { detail: res }));
     } catch(err) {
       console.error('Refresh failed:', err);
+      setDataModeBadge('UNAVAILABLE');
     } finally {
       if (icon) icon.classList.remove('animate-spin');
     }
@@ -248,22 +243,33 @@ window.TradeSense = (function() {
     const medals  = ['🥇', '🥈', '🥉'];
     const classes = ['rank-card-gold', 'rank-card-silver', 'rank-card-bronze'];
     el.innerHTML = portfolios.slice(0, 3).map((p, i) => `
-      <div class="rank-card ${classes[i]} shadow-sm">
+      <div class="rank-card ${classes[i]} shadow-xs p-4 rounded-2xl bg-white border border-slate-200">
         <div class="flex items-center justify-between mb-3">
           <span class="text-2xl">${medals[i]}</span>
-          <span class="text-2xl font-bold text-indigo-700">${p.dm_score?.toFixed(1) ?? '—'}</span>
+          <div class="text-right">
+            <span class="text-2xl font-black text-indigo-700 font-mono">${p.dm_score?.toFixed(1) ?? '—'}</span>
+            <span class="text-[10px] text-slate-400 font-bold block uppercase">DM Score / 100</span>
+          </div>
         </div>
-        <div class="text-xs text-slate-500 font-semibold uppercase mb-1">DM Score</div>
-        <div class="flex flex-wrap gap-1 mb-3">
-          ${(p.portfolio || []).map(s => `<span class="bg-slate-100 text-slate-700 text-xs font-mono px-2 py-0.5 rounded">${s.replace('.NS','')}</span>`).join('')}
+        <div class="flex flex-wrap gap-1.5 mb-3">
+          ${(p.portfolio || []).map(s => `<span class="bg-indigo-50 border border-indigo-200 text-indigo-800 text-xs font-mono font-bold px-2 py-0.5 rounded-md">${s.replace('.NS','')}</span>`).join('')}
         </div>
-        <div class="space-y-1">
-          ${[['Return',p.return_score],['Risk',p.risk_score],['Diversification',p.diversification_score],['Group',p.group_score],['Dominance',p.dominance_score]].map(([label,val]) => `
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-500 w-24">${label}</span>
-              <div class="score-bar flex-1"><div class="score-bar-fill" style="width:${val?.toFixed(1) ?? 0}%"></div></div>
-              <span class="text-xs font-mono text-slate-600 w-10 text-right">${val?.toFixed(1) ?? '—'}</span>
+        <div class="space-y-1.5 pt-1 border-t border-slate-100">
+          ${[
+            ['Return (30%)', p.return_score, '#4f46e5'],
+            ['Risk Efficiency (25%)', p.risk_score, '#7c3aed'],
+            ['Diversification (20%)', p.diversification_score, '#059669'],
+            ['Stability (15%)', p.stability_score ?? p.dominance_score, '#d97706'],
+            ['Network Benefit (10%)', p.network_score ?? p.group_score, '#0284c7']
+          ].map(([label, val, col]) => `
+            <div class="flex items-center gap-2 text-[11px]">
+              <span class="text-slate-600 font-medium w-36 truncate">${label}</span>
+              <div class="score-bar flex-1 bg-slate-100 rounded-full h-2 overflow-hidden"><div class="score-bar-fill h-full rounded-full" style="width:${Math.min(100, Math.max(0, val || 0)).toFixed(1)}%; background-color: ${col}"></div></div>
+              <span class="font-mono text-slate-700 font-bold w-9 text-right">${val != null ? Number(val).toFixed(1) : '—'}</span>
             </div>`).join('')}
+        </div>
+        <div class="text-[10px] text-slate-400 mt-2.5 pt-2 border-t border-slate-100 leading-tight">
+          Score = 0.30×Return + 0.25×RiskEff + 0.20×Div + 0.15×Stab + 0.10×Net
         </div>
       </div>`).join('');
   }

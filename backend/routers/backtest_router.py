@@ -32,9 +32,28 @@ def backtest_portfolio(req: BacktestRequest):
         # Fetch historical closes
         price_dfs = {}
         for s in symbols:
-            df = yf.download(s, period=req.period, progress=False)
-            if not df.empty:
-                price_dfs[s] = df
+            try:
+                df = yf.download(s, period=req.period, progress=False)
+                if df is not None and not df.empty:
+                    price_dfs[s] = df
+            except Exception as e:
+                logger.warning("yfinance download failed for %s: %s", s, e)
+
+        # Fallback to pipeline cached price_data or demo data if yfinance is empty
+        if not price_dfs:
+            from backend.routers.analysis import _last_result
+            cached_prices = _last_result.get("price_data", {})
+            for s in symbols:
+                if s in cached_prices and not cached_prices[s].empty:
+                    price_dfs[s] = cached_prices[s]
+
+        if not price_dfs:
+            from backend.providers.demo_provider import DemoDataProvider
+            demo = DemoDataProvider()
+            for s in symbols:
+                df = demo.get_historical_data(s, "2023-01-01", "2024-01-01", "1d")
+                if not df.empty:
+                    price_dfs[s] = df
 
         if not price_dfs:
             raise HTTPException(status_code=400, detail="Could not retrieve historical data for symbols.")

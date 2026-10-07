@@ -93,6 +93,19 @@ async function loadNews() {
   try {
     const res = await TradeSense.apiCall('/api/market/news');
     allNews = res?.news || [];
+
+    // Dynamically populate sectors
+    const sectorFilter = document.getElementById('news-sector-filter');
+    if (sectorFilter && allNews.length > 0) {
+      const sectors = [...new Set(allNews.map(n => n.sector).filter(Boolean))].sort();
+      const currentVal = sectorFilter.value;
+      sectorFilter.innerHTML = '<option value="ALL">All Sectors</option>' + 
+        sectors.map(sec => `<option value="${sec}">${sec}</option>`).join('');
+      if (currentVal && sectors.includes(currentVal)) {
+        sectorFilter.value = currentVal;
+      }
+    }
+
     filterNews();
   } catch(e) {
     if (container) {

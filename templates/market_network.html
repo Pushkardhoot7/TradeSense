@@ -2,72 +2,53 @@
 
 {% block title %}Market Connection Network{% endblock %}
 {% block page_title %}🕸️ Market Connection Network{% endblock %}
-{% block page_subtitle %}Stocks are connected when their prices tend to move closely together{% endblock %}
+{% block page_subtitle %}Each circle is a stock. A line means two stocks have a strong relationship. Fewer connections can provide better diversification opportunities.{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
 
-  <!-- What This Means / Why It Matters Dual Banners -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div class="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-1.5 shadow-2xs">
-      <div class="text-xs font-bold text-indigo-900 uppercase tracking-wide flex items-center gap-1.5">
-        <span>💡</span> What Does This Mean?
-      </div>
-      <p class="text-xs text-indigo-900/90 leading-relaxed">
-        Each circle represents a stock. A connecting line means the two stocks have a strong statistical relationship (correlation $r \ge \theta$).
-        More connections indicate that a stock moves tightly in tandem with the general market. Fewer connections highlight independent, diversifying assets.
-      </p>
-    </div>
-
-    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 shadow-2xs">
-      <div class="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
-        <span>🎯</span> Why It Matters For Investors
-      </div>
-      <p class="text-xs text-slate-600 leading-relaxed">
-        Combining stocks that share multiple connecting lines creates concentrated market risk, as they tend to decline together in downturns.
-        Selecting assets with no direct connections provides genuine diversification, smoothing volatility and enhancing risk efficiency.
-      </p>
-    </div>
-  </div>
-
-  <!-- Interactive Threshold & Graph Controls Bar -->
+  <!-- Interactive Threshold & Network Controls Bar -->
   <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
     <div class="flex items-center gap-4 flex-wrap">
       <div>
         <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">
-          Co-Movement Threshold (<span id="threshold-val" class="text-indigo-600 font-mono font-bold">0.70</span>)
+          Connection Sensitivity Threshold (<span id="threshold-val" class="text-indigo-600 font-mono font-bold">0.70</span>)
         </label>
         <div class="flex items-center gap-2">
           <span class="text-xs text-slate-400 font-mono">0.50</span>
-          <input type="range" id="threshold-slider" min="0.50" max="0.90" step="0.05" value="0.70" oninput="onThresholdChange(this.value)" class="w-48 sm:w-64 accent-indigo-600 cursor-pointer"/>
+          <input type="range" id="threshold-slider" min="0.50" max="0.90" step="0.05" value="0.70" oninput="onThresholdChange(this.value)" class="w-44 sm:w-60 accent-indigo-600 cursor-pointer"/>
           <span class="text-xs text-slate-400 font-mono">0.90</span>
         </div>
       </div>
 
       <div class="h-8 w-px bg-slate-200 hidden sm:block"></div>
 
-      <!-- Graph Quick Stats -->
-      <div class="flex items-center gap-3 text-xs flex-wrap">
-        <div class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
-          <span class="text-slate-400 font-medium">Stocks Analyzed:</span>
-          <span id="graph-v" class="font-bold text-slate-800 ml-1">103</span>
+      <!-- Network Stats Bar -->
+      <div class="flex items-center gap-2.5 text-xs flex-wrap">
+        <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+          <span class="text-slate-400 font-medium">Stocks:</span>
+          <span id="graph-v" class="font-bold text-slate-900 ml-1 font-mono">93</span>
         </div>
-        <div class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
-          <span class="text-slate-400 font-medium">Active Links:</span>
-          <span id="graph-e" class="font-bold text-indigo-600 ml-1">0</span>
+        <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+          <span class="text-slate-400 font-medium">Connections:</span>
+          <span id="graph-e" class="font-bold text-indigo-600 ml-1 font-mono">0</span>
         </div>
-        <div class="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
-          <span class="text-slate-400 font-medium">Network Density:</span>
+        <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+          <span class="text-slate-400 font-medium">Density:</span>
           <span id="graph-density" class="font-bold text-purple-600 ml-1 font-mono">0.0%</span>
+        </div>
+        <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+          <span class="text-slate-400 font-medium">Connected Groups:</span>
+          <span id="graph-groups" class="font-bold text-emerald-600 ml-1 font-mono">—</span>
         </div>
       </div>
     </div>
 
-    <!-- Centrality / Most Connected Badge -->
+    <!-- Most Connected Stock Badge -->
     <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center gap-2.5 text-xs">
       <span class="text-base">👑</span>
       <div>
-        <div class="text-[10px] uppercase font-bold text-indigo-600">Central Market Hub</div>
+        <div class="text-[10px] uppercase font-bold text-indigo-600">Most Connected Stock</div>
         <div id="graph-hub" class="font-bold text-slate-900 font-mono text-sm">Calculating...</div>
       </div>
     </div>
@@ -77,93 +58,63 @@
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
     <!-- Graph Visualization (8 cols) -->
-    <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+    <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 class="text-sm font-bold text-slate-900">Visual Connection Map</h3>
-          <p class="text-xs text-slate-500 mt-0.5">Move the threshold slider above to observe links establish and dissolve dynamically</p>
+          <p class="text-xs text-slate-500 mt-0.5">Adjust slider above to see relationships form and dissolve</p>
         </div>
-        <span class="text-[11px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
-          Hover node to view details
+        <span class="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+          Hover any circle to view stock details
         </span>
       </div>
 
       <!-- Plotly Network Graph Container -->
       <div id="market-network-plot" class="w-full h-[520px] rounded-xl overflow-hidden bg-slate-50">
         <div class="flex items-center justify-center h-full text-slate-400 text-xs">
-          <span class="animate-spin mr-2">⚙️</span> Rendering Market Network...
+          <span class="animate-spin mr-2">⚙️</span> Rendering Market Connection Network...
         </div>
       </div>
 
-      <!-- Network Conclusion Box -->
-      <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
-        <div class="font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
-          <span>📊</span> Network Analysis Conclusion
+      <!-- WHAT THIS MEANS / WHY IT MATTERS Generated Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <div class="p-4 rounded-xl bg-indigo-50/70 border border-indigo-100 space-y-1.5 shadow-2xs">
+          <div class="text-xs font-black text-indigo-900 uppercase tracking-wide flex items-center gap-1.5">
+            <span>💡</span> WHAT THIS MEANS
+          </div>
+          <p id="what-this-means-text" class="text-xs text-indigo-950 leading-relaxed">
+            Loading calculated market insights...
+          </p>
         </div>
-        <p id="network-conclusion-text" class="text-slate-600 leading-relaxed">
-          Evaluating market co-movement across active stocks...
-        </p>
+
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 shadow-2xs">
+          <div class="text-xs font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+            <span>🎯</span> WHY IT MATTERS
+          </div>
+          <p id="why-it-matters-text" class="text-xs text-slate-700 leading-relaxed">
+            Loading investment takeaways...
+          </p>
+        </div>
       </div>
     </div>
 
-    <!-- Connected Clusters & Diversification (4 cols) -->
-    <div class="lg:col-span-4 space-y-6">
-
-      <!-- Connected Components / Market Clusters -->
-      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Market Clusters</h4>
-          <span id="component-count-badge" class="text-[10px] font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded">
-            ... Clusters
-          </span>
+    <!-- Connected Stock Groups (4 cols) -->
+    <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-800">Stock Groups</h4>
+          <p class="text-[11px] text-slate-400 mt-0.5">Clusters of mutually co-moving stocks</p>
         </div>
-        <p class="text-xs text-slate-500 leading-normal">
-          Stocks within the same cluster exhibit synchronized movement. Selecting one asset from each distinct cluster maximizes portfolio independence.
-        </p>
-        <div id="components-list" class="space-y-2 text-xs max-h-72 overflow-y-auto pr-1">
-          <!-- Populated via JS -->
-        </div>
+        <span id="component-count-badge" class="text-[10px] font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded">
+          ... Groups
+        </span>
       </div>
-
-      <!-- Collapsible Mathematical Traversal (BFS & DFS) -->
-      <details class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3 group">
-        <summary class="flex items-center justify-between cursor-pointer list-none text-xs font-bold uppercase tracking-wider text-slate-700">
-          <div class="flex items-center gap-2">
-            <span>📐</span> Mathematical Traversal (BFS / DFS)
-          </div>
-          <span class="text-indigo-600 group-open:rotate-180 transition-transform">▼</span>
-        </summary>
-
-        <div class="pt-3 space-y-3 border-t border-slate-100">
-          <p class="text-[11px] text-slate-500">
-            Traverses network adjacency from a chosen origin node using queue-based BFS or recursive DFS algorithms.
-          </p>
-
-          <!-- Start Node Picker -->
-          <div>
-            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Select Origin Node</label>
-            <select id="traversal-start-node" onchange="runTraversal(currentTraversalType)" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 outline-none">
-              <!-- Populated via JS -->
-            </select>
-          </div>
-
-          <!-- Algorithm Tabs -->
-          <div class="flex gap-2">
-            <button onclick="runTraversal('BFS')" id="btn-tab-bfs" class="flex-1 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs cursor-pointer">
-              Breadth-First (BFS)
-            </button>
-            <button onclick="runTraversal('DFS')" id="btn-tab-dfs" class="flex-1 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold text-xs hover:bg-slate-200 cursor-pointer">
-              Depth-First (DFS)
-            </button>
-          </div>
-
-          <!-- Trace Output Log -->
-          <div class="bg-slate-950 text-slate-200 p-3 rounded-xl font-mono text-[10px] leading-relaxed max-h-52 overflow-y-auto space-y-1 border border-slate-800" id="traversal-trace-log">
-            <div class="text-slate-500">// Traversal trace will appear here...</div>
-          </div>
-        </div>
-      </details>
-
+      <p class="text-xs text-slate-500 leading-relaxed">
+        Stocks in the same group tend to rise and drop together. For maximum safety, build your portfolio by picking stocks from different groups.
+      </p>
+      <div id="components-list" class="space-y-2 text-xs max-h-[500px] overflow-y-auto pr-1">
+        <!-- Populated via JS -->
+      </div>
     </div>
 
   </div>
@@ -174,7 +125,6 @@
 {% block scripts %}
 <script>
 let currentGraphData = null;
-let currentTraversalType = 'BFS';
 
 async function loadNetworkPage(threshold = 0.70) {
   try {
@@ -183,40 +133,45 @@ async function loadNetworkPage(threshold = 0.70) {
 
     // Update stats
     const stats = res?.stats || {};
-    document.getElementById('graph-v').textContent = stats.num_vertices || 0;
-    document.getElementById('graph-e').textContent = stats.num_edges || 0;
-    document.getElementById('graph-density').textContent = ((stats.density || 0) * 100).toFixed(1) + '%';
+    const vertCount = stats.num_vertices || 0;
+    const edgeCount = stats.num_edges || 0;
+    const densityPct = ((stats.density || 0) * 100).toFixed(1);
+    const components = res.connected_components || [];
+
+    document.getElementById('graph-v').textContent = vertCount;
+    document.getElementById('graph-e').textContent = edgeCount;
+    document.getElementById('graph-density').textContent = densityPct + '%';
+    document.getElementById('graph-groups').textContent = `${components.length} Groups`;
     
-    const hub = stats.most_connected_stock || '—';
+    const hub = stats.most_connected_stock || 'None';
     const hubDegree = stats.degrees && stats.degrees[hub] ? ` (${stats.degrees[hub]} connections)` : '';
     document.getElementById('graph-hub').textContent = hub + hubDegree;
 
-    // Update Network Conclusion
-    const conclusionEl = document.getElementById('network-conclusion-text');
-    if (conclusionEl) {
-      const edgeCount = stats.num_edges || 0;
-      const vertCount = stats.num_vertices || 0;
-      conclusionEl.innerHTML = `At connection threshold <strong>r ≥ ${threshold.toFixed(2)}</strong>, the market exhibits <strong>${edgeCount} strong co-movement links</strong> across ${vertCount} analyzed assets. <strong>${hub}</strong> serves as the central hub with the highest number of co-movements. Assets with zero or minimal connections represent superior candidates for defensive diversification.`;
+    // WHAT THIS MEANS (Generated from actual calculated data)
+    const meansEl = document.getElementById('what-this-means-text');
+    if (meansEl) {
+      if (edgeCount === 0) {
+        meansEl.innerHTML = `At connection threshold <strong>r ≥ ${threshold.toFixed(2)}</strong>, no pair of stocks shares a correlation high enough to form an edge. All <strong>${vertCount} stocks</strong> are currently behaving independently with low mutual synchronization.`;
+      } else {
+        meansEl.innerHTML = `Out of <strong>${vertCount} stocks</strong>, our analysis detected <strong>${edgeCount} strong relationship links</strong> (network density: <strong>${densityPct}%</strong>). <strong>${hub}</strong> is the central hub with the highest number of connections${hubDegree}, meaning it moves in lockstep with the largest group of stocks.`;
+      }
     }
 
-    // Populate start node selector if empty
-    const nodeSelect = document.getElementById('traversal-start-node');
-    if (nodeSelect && nodeSelect.options.length === 0) {
-      const tickers = res.tickers || Object.keys(res.adjacency || {});
-      nodeSelect.innerHTML = tickers.map(t => `<option value="${t}">${t}</option>`).join('');
-      if (hub && tickers.includes(hub)) {
-        nodeSelect.value = hub;
+    // WHY IT MATTERS (Generated from actual calculated data)
+    const mattersEl = document.getElementById('why-it-matters-text');
+    if (mattersEl) {
+      if (edgeCount > 0) {
+        mattersEl.innerHTML = `Holding connected stocks like <strong>${hub}</strong> and its peers concentrates your downside risk if that sector falls. To achieve real diversification, select stocks with zero or few connections across the <strong>${components.length} distinct groups</strong> on the right.`;
+      } else {
+        mattersEl.innerHTML = `When connection density is 0%, combining these assets provides natural protection because no single asset drag will automatically pull the other assets down.`;
       }
     }
 
     // Render Plotly Network
     TradeSense.renderNetworkGraph('market-network-plot', res);
 
-    // Initial BFS trace
-    runTraversal('BFS');
-
     // Render components
-    renderComponents(res.connected_components || []);
+    renderComponents(components);
   } catch(e) {
     console.error("Network page error:", e);
   }
@@ -227,49 +182,25 @@ function onThresholdChange(val) {
   loadNetworkPage(parseFloat(val));
 }
 
-function runTraversal(type) {
-  currentTraversalType = type;
-  const startNode = document.getElementById('traversal-start-node')?.value || 'TCS.NS';
-  const log = document.getElementById('traversal-trace-log');
-  const btnBfs = document.getElementById('btn-tab-bfs');
-  const btnDfs = document.getElementById('btn-tab-dfs');
-
-  if (type === 'BFS') {
-    btnBfs.className = 'flex-1 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs';
-    btnDfs.className = 'flex-1 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold text-xs hover:bg-slate-200';
-  } else {
-    btnDfs.className = 'flex-1 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs';
-    btnBfs.className = 'flex-1 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold text-xs hover:bg-slate-200';
-  }
-
-  const trace = type === 'BFS' ? currentGraphData?.bfs?.trace : currentGraphData?.dfs?.trace;
-  const order = type === 'BFS' ? currentGraphData?.bfs?.order : currentGraphData?.dfs?.order;
-
-  if (log) {
-    log.innerHTML = `
-      <div class="text-indigo-400 font-bold">▶ Running ${type} from [${startNode}]</div>
-      <div class="text-emerald-400 mt-1">Visit Order: ${Array.isArray(order) && order.length > 0 ? order.join(' → ') : 'Complete'}</div>
-      <div class="border-t border-slate-800 pt-1.5 text-slate-400 space-y-0.5">
-        ${(trace || ['Traversal completed across graph component.']).slice(0, 15).map(s => `<div>${s}</div>`).join('')}
-      </div>
-    `;
-  }
-}
-
 function renderComponents(components) {
   const container = document.getElementById('components-list');
   const badge = document.getElementById('component-count-badge');
-  if (badge) badge.textContent = `${components.length} Clusters`;
+  if (badge) badge.textContent = `${components.length} Groups`;
 
   if (container) {
     if (components.length === 0) {
-      container.innerHTML = `<div class="p-3 bg-slate-50 text-slate-400 rounded-xl">No clusters found.</div>`;
+      container.innerHTML = `<div class="p-3 bg-slate-50 text-slate-400 rounded-xl">No groups found.</div>`;
       return;
     }
     container.innerHTML = components.map((c, idx) => `
-      <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
-        <div class="font-bold text-indigo-600 text-[11px]">Cluster #${idx + 1} (${c.length} Assets)</div>
-        <div class="text-slate-700 font-mono text-[11px] mt-0.5">${c.join(', ')}</div>
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+        <div class="font-bold text-indigo-600 text-xs flex justify-between">
+          <span>Group #${idx + 1}</span>
+          <span class="text-[10px] text-slate-400 font-mono">${c.length} Stocks</span>
+        </div>
+        <div class="text-slate-700 font-mono text-[11px] mt-1 flex flex-wrap gap-1">
+          ${c.map(s => `<span class="bg-white px-1.5 py-0.5 rounded border border-slate-200">${s.replace('.NS','')}</span>`).join('')}
+        </div>
       </div>
     `).join('');
   }

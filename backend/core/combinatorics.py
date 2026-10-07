@@ -53,11 +53,13 @@ def generate_combinations(
 
 def select_candidate_pool(
     metrics: list[dict],
-    pool_size: int = 15,
+    pool_size: int = 20,
 ) -> list[str]:
     """
-    Reduce the eligible stock universe to at most `pool_size` candidates,
-    ranked by Sharpe ratio descending (Return% as fallback).
+    Select an expert-diversified candidate pool of up to `pool_size` stocks.
+    Uses multi-sector round-robin selection: ranks stocks within each sector
+    by Sharpe ratio (with Return% fallback) and picks top candidates across
+    different sectors to prevent sector-concentration bias.
     """
     if not metrics:
         return []
@@ -66,11 +68,46 @@ def select_candidate_pool(
     if not valid:
         valid = metrics
 
+    # Group by sector
+    sector_groups: dict[str, list[dict]] = {}
+    for m in valid:
+        sec = m.get("sector", "Other") or "Other"
+        sector_groups.setdefault(sec, []).append(m)
+
+    # Sort stocks within each sector by Sharpe ratio descending
     def sort_key(m: dict) -> float:
         return float(m.get("sharpe", m.get("return_pct", 0.0)) or 0.0)
 
-    ranked = sorted(valid, key=sort_key, reverse=True)
-    return [m["symbol"] for m in ranked[:pool_size]]
+    for sec in sector_groups:
+        sector_groups[sec].sort(key=sort_key, reverse=True)
+
+    # Round-robin selection across sectors to guarantee multi-sector representation
+    selected: list[str] = []
+    round_idx = 0
+    while len(selected) < pool_size:
+        added_in_round = 0
+        for sec, stocks in sector_groups.items():
+            if round_idx < len(stocks):
+                sym = stocks[round_idx]["symbol"]
+                if sym not in selected:
+                    selected.append(sym)
+                    added_in_round += 1
+                    if len(selected) >= pool_size:
+                        break
+        if added_in_round == 0:
+            break
+        round_idx += 1
+
+    # If still below pool_size, fill with remaining highest Sharpe stocks
+    if len(selected) < pool_size:
+        all_ranked = sorted(valid, key=sort_key, reverse=True)
+        for m in all_ranked:
+            if m["symbol"] not in selected:
+                selected.append(m["symbol"])
+                if len(selected) >= pool_size:
+                    break
+
+    return selected[:pool_size]
 
 
 def format_combinatorics_display(

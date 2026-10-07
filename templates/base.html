@@ -94,13 +94,13 @@
           <span class="text-[10px] font-bold text-slate-400">Data Pipeline</span>
           <button onclick="TradeSense.openDataSourceModal()" class="text-[9px] text-indigo-400 hover:text-indigo-300 underline font-medium">Specs</button>
         </div>
-        <div id="sidebar-data-mode" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">
-          <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
-          <span id="sidebar-mode-text">HISTORICAL DATA</span>
+        <div id="sidebar-data-mode" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="sidebar-mode-text">● LIVE • NSE</span>
         </div>
         <div class="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/60 font-mono">
           <span>Universe:</span>
-          <span class="text-indigo-300 font-bold">103 Stocks · 12 Sectors</span>
+          <span class="text-indigo-300 font-bold">93 Stocks · 12 Sectors</span>
         </div>
       </div>
     </div>
@@ -140,14 +140,14 @@
       </button>
 
       <!-- Market Live Status Badge -->
-      <div id="market-status-badge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200 transition-all">
-        <span id="market-status-dot" class="w-2 h-2 rounded-full bg-slate-400"></span>
-        <span id="market-status-text">Checking NSE...</span>
+      <div id="market-status-badge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all">
+        <span id="market-status-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="market-status-text">● LIVE • NSE</span>
       </div>
 
       <!-- Data Mode Badge -->
-      <div id="data-mode-badge" class="badge-historical cursor-pointer text-xs" onclick="TradeSense.openDataSourceModal()" title="Click to view data source details">
-        HISTORICAL
+      <div id="data-mode-badge" class="badge-live cursor-pointer text-xs" onclick="TradeSense.openDataSourceModal()" title="Click to view data source details">
+        ● LIVE • NSE
       </div>
 
       <!-- Connect Devices Button -->
@@ -158,8 +158,8 @@
 
       <!-- Last Updated -->
       <div class="hidden lg:flex items-center gap-1.5 text-xs text-slate-500 font-mono bg-slate-100/80 px-2.5 py-1.5 rounded-md border border-slate-200/60">
-        <span class="text-slate-400">Updated:</span>
-        <span id="last-updated">Latest</span>
+        <span class="text-slate-400">Last Updated:</span>
+        <span id="last-updated" class="font-bold text-slate-700">Checking...</span>
       </div>
     </div>
   </header>
@@ -302,7 +302,13 @@ async function updateGlobalMarketStatus() {
     const dot   = document.getElementById('market-status-dot');
     
     if (s && text) {
-      text.textContent = `${s.status || 'NSE'} • NSE`;
+      const shortSt = s.short_status || s.status || 'NSE';
+      text.textContent = `● LIVE • NSE (${shortSt})`;
+    }
+    
+    const lastUp = document.getElementById('last-updated');
+    if (lastUp && (s.last_updated || s.timestamp)) {
+      lastUp.textContent = s.last_updated || (s.timestamp.includes(',') ? s.timestamp.split(',')[1].trim() : s.timestamp);
     }
     
     if (s && badge) {
@@ -316,15 +322,17 @@ async function updateGlobalMarketStatus() {
         badge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all bg-blue-50 text-blue-700 border-blue-300 shadow-2xs';
         if (dot) dot.className = 'w-2 h-2 rounded-full bg-blue-500';
       } else {
-        badge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all bg-slate-100 text-slate-600 border-slate-300 shadow-2xs';
-        if (dot) dot.className = 'w-2 h-2 rounded-full bg-slate-400';
+        badge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all bg-slate-100 text-slate-700 border-slate-300 shadow-2xs';
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-slate-500';
       }
     }
   } catch(e) {
     const badge = document.getElementById('market-status-badge');
     const text  = document.getElementById('market-status-text');
     const dot   = document.getElementById('market-status-dot');
-    if (text) text.textContent = 'DATA UNAVAILABLE';
+    const lastUp = document.getElementById('last-updated');
+    if (text) text.textContent = 'Live data unavailable';
+    if (lastUp) lastUp.textContent = 'Live data unavailable';
     if (badge) badge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all bg-rose-50 text-rose-700 border-rose-300 shadow-2xs';
     if (dot) dot.className = 'w-2 h-2 rounded-full bg-rose-500';
   }
