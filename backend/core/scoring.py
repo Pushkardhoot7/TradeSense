@@ -133,13 +133,14 @@ def run_scoring_pipeline(
                 "weights": DM_WEIGHTS, "disclaimer": DISCLAIMER}
 
     total_color_groups = max(len(set(coloring.values())), 1) if coloring else 1
+    cov_df = (returns_df.cov() * 252) if (returns_df is not None and not returns_df.empty) else None
 
     # ------------------------------------------------------------------
     # Step 1 — Evaluate raw metrics for every candidate
     # ------------------------------------------------------------------
     raw: list[dict] = []
     for idx, p in enumerate(candidates):
-        ev = evaluate_portfolio(p, metrics, returns_df, corr_df)
+        ev = evaluate_portfolio(p, metrics, returns_df, corr_df, cov_df=cov_df)
         if not ev["valid"]:
             continue
 

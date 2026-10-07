@@ -99,8 +99,10 @@ class LiveDataProvider(MarketDataProvider):
             return list(executor.map(self.get_quote, symbols))
 
     # ------------------------------------------------------------------
-    # Historical data methods
+    # Historical data methods with Batch Acceleration & TTL Cache
     # ------------------------------------------------------------------
+
+    _cache: dict[tuple, tuple[float, dict[str, pd.DataFrame]]] = {}
 
     def get_historical_data(
         self,
@@ -145,22 +147,98 @@ class LiveDataProvider(MarketDataProvider):
         end: str,
         interval: str = "1d",
     ) -> dict[str, pd.DataFrame]:
+        import time
+
+        now = time.time()
+        cache_key = (tuple(sorted(symbols)), start, end, interval)
+
+        # 1. Check TTL Cache (10 minutes TTL)
+        if cache_key in self._cache:
+            ts, cached_data = self._cache[cache_key]
+            if now - ts < 600 and len(cached_data) >= len(symbols) * 0.7:
+                logger.info("Live bulk data served from memory cache (%d stocks)", len(cached_data))
+                return cached_data
+
         results: dict[str, pd.DataFrame] = {}
 
-        def _fetch_one(sym: str):
-            try:
-                data = self.get_historical_data(sym, start, end, interval)
-                return sym, data
-            except Exception as e:
-                logger.warning("Live data fetch error for %s: %s", sym, e)
-                return sym, None
+        # 2. High-speed single batch download via yfinance
+        try:
+            logger.info("Initiating high-speed batch download for %d symbols...", len(symbols))
+            batch_df = yf.download(
+                tickers=symbols,
+                start=start,
+                end=end,
+                interval=interval,
+                group_by="ticker",
+                auto_adjust=False,
+                threads=True,
+                progress=False,
+            )
 
-        max_workers = min(15, max(len(symbols), 1))
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            fetched = executor.map(_fetch_one, symbols)
-            for sym, df in fetched:
-                if df is not None and not df.empty:
-                    results[sym] = df
+            if not batch_df.empty:
+                if len(symbols) == 1:
+                    sym = symbols[0]
+                    clean = batch_df.dropna(how="all")
+                    if not clean.empty:
+                        if isinstance(clean.columns, pd.MultiIndex):
+                            clean.columns = clean.columns.get_level_values(0)
+                        if "Close" in clean.columns and clean["Close"].dropna().shape[0] > 5:
+                            if "Adj Close" not in clean.columns:
+                                clean["Adj Close"] = clean["Close"]
+                            results[sym] = clean
+                else:
+                    for sym in symbols:
+                        try:
+                            # Handle both multi-index formats
+                            if hasattr(batch_df.columns, "levels") and sym in batch_df.columns.levels[0]:
+                                sub = batch_df[sym].dropna(how="all").copy()
+                                if not sub.empty and "Close" in sub.columns and sub["Close"].dropna().shape[0] > 5:
+                                    if "Adj Close" not in sub.columns:
+                                        sub["Adj Close"] = sub["Close"]
+                                    if sub.index.tz is not None:
+                                        sub.index = sub.index.tz_localize(None)
+                                    sub.index.name = "Date"
+                                    results[sym] = sub
+                            elif "Close" in batch_df.columns and sym in batch_df["Close"].columns:
+                                close_s = batch_df["Close"][sym].dropna()
+                                if len(close_s) > 5:
+                                    sub = pd.DataFrame({
+                                        "Open": batch_df["Open"][sym] if "Open" in batch_df else close_s,
+                                        "High": batch_df["High"][sym] if "High" in batch_df else close_s,
+                                        "Low": batch_df["Low"][sym] if "Low" in batch_df else close_s,
+                                        "Close": close_s,
+                                        "Volume": batch_df["Volume"][sym] if "Volume" in batch_df else 0,
+                                        "Adj Close": close_s,
+                                    }).dropna(how="all")
+                                    if sub.index.tz is not None:
+                                        sub.index = sub.index.tz_localize(None)
+                                    sub.index.name = "Date"
+                                    results[sym] = sub
+                        except Exception as sym_err:
+                            logger.debug("Parsing error for %s: %s", sym, sym_err)
+        except Exception as batch_exc:
+            logger.warning("Bulk batch download failed, falling back to parallel worker fetch: %s", batch_exc)
+
+        # 3. Fallback for any missing stocks using ThreadPoolExecutor
+        missing = [s for s in symbols if s not in results]
+        if missing and len(missing) < len(symbols):
+            logger.info("Fetching remaining %d tickers in parallel...", len(missing))
+            def _fetch_one(sym: str):
+                try:
+                    data = self.get_historical_data(sym, start, end, interval)
+                    return sym, data
+                except Exception:
+                    return sym, None
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(12, len(missing))) as executor:
+                for sym, df in executor.map(_fetch_one, missing):
+                    if df is not None and not df.empty:
+                        results[sym] = df
+
+        # 4. Update cache
+        if len(results) > 0:
+            self._cache[cache_key] = (now, results)
+            logger.info("Successfully loaded %d / %d stocks in bulk.", len(results), len(symbols))
 
         return results
 

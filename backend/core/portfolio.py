@@ -24,7 +24,8 @@ _RISK_FREE_RATE = 5.0  # %
 
 def covariance_portfolio_volatility(
     portfolio: tuple[str, ...] | list[str],
-    returns_df: pd.DataFrame,
+    returns_df: pd.DataFrame | None = None,
+    cov_df: pd.DataFrame | None = None,
 ) -> float:
     """
     Compute annualised portfolio volatility via covariance matrix.
@@ -34,7 +35,19 @@ def covariance_portfolio_volatility(
     Returns annualised percentage (e.g. 18.4 for 18.4%).
     """
     k = len(portfolio)
-    if k == 0 or returns_df is None or returns_df.empty:
+    if k == 0:
+        return 0.0
+
+    if cov_df is not None:
+        valid = [t for t in portfolio if t in cov_df.columns]
+        if not valid:
+            return 0.0
+        w = np.full(len(valid), 1.0 / len(valid))
+        sub_cov = cov_df.loc[valid, valid].values
+        port_var = float(w @ sub_cov @ w)
+        return round(float(math.sqrt(max(port_var, 0.0))) * 100.0, 4)
+
+    if returns_df is None or returns_df.empty:
         return 0.0
 
     valid = [t for t in portfolio if t in returns_df.columns]
@@ -88,6 +101,7 @@ def evaluate_portfolio(
     metrics: list[dict],
     returns_df: pd.DataFrame,
     corr_df: pd.DataFrame,
+    cov_df: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     """
     Compute all portfolio-level metrics for one candidate.
@@ -106,7 +120,7 @@ def evaluate_portfolio(
                 "risk_pct": 0.0, "avg_correlation": 1.0, "valid": False}
 
     ret  = portfolio_return(portfolio, metrics)
-    risk = covariance_portfolio_volatility(portfolio, returns_df)
+    risk = covariance_portfolio_volatility(portfolio, returns_df, cov_df=cov_df)
     corr = avg_pairwise_correlation(portfolio, corr_df)
 
     return {
