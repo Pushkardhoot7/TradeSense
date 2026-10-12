@@ -119,10 +119,31 @@ class LiveDataProvider(MarketDataProvider):
         volume = info.get("lastVolume") or info.get("volume") or info.get("regularMarketVolume")
 
         # If live quote unavailable from yfinance, attempt backup provider
+        source = "NSE via yfinance"
         if price is None:
             backup_quote = self.backup_provider.get_quote(symbol)
             if backup_quote.get("price") is not None:
                 return backup_quote
+            source = "Unavailable"
+
+        market_status = self.get_market_status()
+        is_open = (market_status == "OPEN")
+        price_type = "LIVE_QUOTE" if is_open else "OFFICIAL_CLOSE"
+
+        # Determine session date (today if open, or most recent weekday/trading date)
+        now_ist = datetime.datetime.now(IST)
+        session_date = now_ist.strftime("%Y-%m-%d")
+        if not is_open:
+            # If weekend or pre-market, session date is the latest completed session
+            weekday = now_ist.weekday()
+            if weekday == 5: # Saturday -> Friday
+                session_date = (now_ist - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+            elif weekday == 6: # Sunday -> Friday
+                session_date = (now_ist - datetime.timedelta(days=2)).strftime("%Y-%m-%d")
+            elif now_ist.hour < 9 or (now_ist.hour == 9 and now_ist.minute < 15):
+                # Before market open on Monday -> Friday
+                days_back = 3 if weekday == 0 else 1
+                session_date = (now_ist - datetime.timedelta(days=days_back)).strftime("%Y-%m-%d")
 
         return {
             "symbol": symbol,
@@ -130,7 +151,11 @@ class LiveDataProvider(MarketDataProvider):
             "change": change,
             "change_percent": change_pct,
             "volume": volume,
-            "market_status": self.get_market_status(),
+            "market_status": market_status,
+            "is_market_open": is_open,
+            "price_type": price_type,
+            "session_date": session_date,
+            "data_source": source,
             "timestamp": self.get_last_updated(),
         }
 

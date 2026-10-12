@@ -2,7 +2,7 @@
 from __future__ import annotations
 import logging
 import math
-from typing import Any
+from typing import Any, Optional
 
 import pandas as pd
 from fastapi import APIRouter, Query
@@ -137,7 +137,8 @@ def get_analysis_context():
 
 
 @router.get("/correlation")
-def correlation():
+def correlation(subset: Optional[str] = Query(default=None)):
+    global _last_result
     if not _last_result:
         result = AnalysisPipeline(AnalyzeRequest()).run()
         _last_result.update(result)
@@ -145,23 +146,46 @@ def correlation():
     stats = _last_result.get("correlation_stats", {})
     validation = _last_result.get("matrix_validation", {})
     corr_df = _last_result.get("correlation_matrix_df")
-    
-    strong_pairs = []
+    tickers = _last_result.get("tickers", [])
+
     if corr_df is not None and not corr_df.empty:
-        from backend.core.matrix import extract_upper_triangle
-        strong_pairs = extract_upper_triangle(corr_df)
-    
+        active_tickers = tickers
+        if subset:
+            req_symbols = [s.strip() for s in subset.split(",") if s.strip()]
+            active_tickers = [s for s in req_symbols if s in corr_df.columns]
+            if not active_tickers:
+                active_tickers = tickers
+
+        sub_df = corr_df.loc[active_tickers, active_tickers]
+        from backend.core.matrix import extract_upper_triangle, get_correlation_stats, validate_matrix_properties
+        strong_pairs = extract_upper_triangle(sub_df)
+        sub_stats = get_correlation_stats(sub_df)
+        sub_valid = validate_matrix_properties(sub_df)
+
+        return {
+            "matrix": sub_df.to_dict(),
+            "stats": sub_stats,
+            "validation": sub_valid,
+            "tickers": active_tickers,
+            "all_tickers": tickers,
+            "strong_pairs": strong_pairs,
+        }
+
     return {
         "matrix": corr,
         "stats": stats,
         "validation": validation,
-        "tickers": _last_result.get("tickers", []),
-        "strong_pairs": strong_pairs,
+        "tickers": tickers,
+        "all_tickers": tickers,
+        "strong_pairs": [],
     }
 
 
 @router.get("/graph")
-def graph(threshold: float = Query(default=0.70, ge=0.5, le=0.95)):
+def graph(
+    threshold: float = Query(default=0.70, ge=0.3, le=0.95),
+    subset: Optional[str] = Query(default=None),
+):
     global _last_result
     if not _last_result:
         try:
@@ -193,18 +217,102 @@ def graph(threshold: float = Query(default=0.70, ge=0.5, le=0.95)):
     if corr is None or (isinstance(corr, pd.DataFrame) and corr.empty):
         return {"error": "No analysis data available. Run /api/analyze first."}
 
+    # Handle subset selection if provided
+    active_tickers = tickers
+    if subset:
+        req_symbols = [s.strip() for s in subset.split(",") if s.strip()]
+        filtered = [s for s in req_symbols if s in corr.columns]
+        if filtered:
+            active_tickers = filtered
+
     from backend.core.graph import build_adjacency_dict, calculate_graph_statistics, bfs, dfs, connected_components_from_scratch
-    adj = build_adjacency_dict(tickers, corr, threshold)
-    stats = calculate_graph_statistics(adj, tickers)
-    most_connected = stats.get("most_connected_stock", tickers[0] if tickers else "")
+    from backend.core.clustering import cluster_by_correlation_threshold
+
+    adj = build_adjacency_dict(active_tickers, corr, threshold)
+    stats = calculate_graph_statistics(adj, active_tickers)
+    most_connected = stats.get("most_connected_stock", active_tickers[0] if active_tickers else "")
     bfs_order, bfs_trace = bfs(adj, most_connected) if most_connected else ([], [])
     dfs_order, dfs_trace = dfs(adj, most_connected) if most_connected else ([], [])
     components = connected_components_from_scratch(adj)
     edges = [{"source": src, "target": tgt, "weight": round(float(w), 4)}
              for src, neighbors in adj.items() for tgt, w in neighbors if src < tgt]
+
+    # Calculate genuine correlation clusters
+    clustering_res = cluster_by_correlation_threshold(active_tickers, corr, threshold=threshold)
+    clusters = clustering_res.get("clusters", [])
+    unclustered = clustering_res.get("unclustered", [])
+
     coloring_dict = _last_result.get("coloring_dict") or _last_result.get("coloring", {}).get("coloring_dict", {})
-    return {"threshold": threshold, "stats": stats, "edges": edges, "tickers": tickers,
-            "coloring_dict": coloring_dict,
-            "bfs": {"start": most_connected, "order": bfs_order, "trace": bfs_trace},
-            "dfs": {"start": most_connected, "order": dfs_order, "trace": dfs_trace},
-            "connected_components": components}
+
+    # Phase 2 Diagnostic Logging
+    valid_price_count = len(_last_result.get("price_data", {}))
+    logger.info(
+        "[Graph Diagnostics] Total Eligible Stocks: %d | Active Subset: %d | "
+        "Valid Price Series: %d | Threshold: %.2f | Qualifying Edges: %d | "
+        "Multi-Stock Clusters: %d | Unclustered: %d",
+        len(tickers), len(active_tickers), valid_price_count, threshold, len(edges),
+        len(clusters), len(unclustered)
+    )
+
+    diagnostics = {
+        "eligible_stocks_count": len(tickers),
+        "active_selection_count": len(active_tickers),
+        "valid_price_series_count": valid_price_count,
+        "threshold": threshold,
+        "qualifying_edges_count": len(edges),
+        "multi_stock_clusters_count": len(clusters),
+        "unclustered_stocks_count": len(unclustered),
+    }
+
+    return {
+        "threshold": threshold,
+        "stats": stats,
+        "edges": edges,
+        "tickers": active_tickers,
+        "all_tickers": tickers,
+        "clusters": clusters,
+        "unclustered": unclustered,
+        "coloring_dict": coloring_dict,
+        "bfs": {"start": most_connected, "order": bfs_order, "trace": bfs_trace},
+        "dfs": {"start": most_connected, "order": dfs_order, "trace": dfs_trace},
+        "connected_components": components,
+        "diagnostics": diagnostics,
+    }
+
+
+@router.get("/clusters")
+def get_clusters(
+    threshold: float = Query(default=0.70, ge=0.3, le=0.95),
+    subset: Optional[str] = Query(default=None),
+):
+    """Retrieve correlation-based co-movement stock clusters and unclustered singletons."""
+    global _last_result
+    if not _last_result:
+        try:
+            result = AnalysisPipeline(AnalyzeRequest(data_mode="LIVE")).run()
+            _last_result.update(result)
+        except Exception:
+            result = AnalysisPipeline(AnalyzeRequest(data_mode="DEMO")).run()
+            _last_result.update(result)
+
+    corr = _last_result.get("correlation_matrix_df")
+    tickers = _last_result.get("tickers", [])
+
+    if corr is None or (isinstance(corr, pd.DataFrame) and corr.empty):
+        raw_mat = _last_result.get("correlation_matrix")
+        if raw_mat and isinstance(raw_mat, dict):
+            corr = pd.DataFrame(raw_mat)
+            _last_result["correlation_matrix_df"] = corr
+
+    if corr is None or (isinstance(corr, pd.DataFrame) and corr.empty):
+        return {"clusters": [], "unclustered": [], "total_stocks": 0}
+
+    active_tickers = tickers
+    if subset:
+        req_symbols = [s.strip() for s in subset.split(",") if s.strip()]
+        filtered = [s for s in req_symbols if s in corr.columns]
+        if filtered:
+            active_tickers = filtered
+
+    from backend.core.clustering import cluster_by_correlation_threshold
+    return cluster_by_correlation_threshold(active_tickers, corr, threshold=threshold)

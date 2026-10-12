@@ -547,6 +547,31 @@ class AnalysisPipeline:
             }
             result.setdefault("graph_stats", graph_stats)
 
+        # ── Stage 8b: Correlation-based Clustering (Mantegna Metric & Threshold) ─
+        try:
+            from backend.core.clustering import cluster_by_correlation_threshold
+            if corr_df is not None and not corr_df.empty:
+                clustering_res = cluster_by_correlation_threshold(
+                    valid_symbols, corr_df, threshold=cfg.corr_threshold
+                )
+                result["stock_clusters"] = clustering_res.get("clusters", [])
+                result["unclustered_stocks"] = clustering_res.get("unclustered", [])
+                result["clustering_summary"] = {
+                    "total_stocks": clustering_res.get("total_stocks", len(valid_symbols)),
+                    "cluster_count": clustering_res.get("cluster_count", 0),
+                    "clustered_stocks_count": clustering_res.get("clustered_stocks_count", 0),
+                    "unclustered_stocks_count": clustering_res.get("unclustered_stocks_count", 0),
+                    "method": clustering_res.get("method", ""),
+                }
+                logger.info("[Stage 8b] Stock Clusters: %d multi-stock, %d unclustered",
+                            clustering_res.get("cluster_count", 0),
+                            clustering_res.get("unclustered_stocks_count", 0))
+        except Exception as exc:
+            logger.error("[Stage 8b] Clustering failed: %s", exc)
+            result["stock_clusters"] = []
+            result["unclustered_stocks"] = []
+            result["clustering_summary"] = {}
+
         # Network conclusion
         result["network_conclusion"] = _generate_network_conclusion(
             graph_stats, strong_rels, components, metrics_list

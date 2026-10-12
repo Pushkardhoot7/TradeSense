@@ -338,3 +338,18 @@ def network_info():
         "port": port
     }
 
+
+@router.get("/quote/{symbol}")
+def get_quote(symbol: str):
+    """Return latest quote with freshness metadata (price_type, session_date, is_market_open)."""
+    from backend.providers.live_provider import LiveDataProvider
+    provider = LiveDataProvider()
+    q = provider.get_quote(symbol)
+    if not isinstance(q, dict):
+        return {"symbol": symbol, "price": None, "status": "unavailable"}
+    return {
+        **q,
+        "status": "success" if (q.get("price") is not None and q.get("price", 0) > 0) else "unavailable",
+    }
+
+

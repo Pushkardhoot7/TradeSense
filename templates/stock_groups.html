@@ -1,77 +1,120 @@
 {% extends "base.html" %}
 
-{% block title %}Stock Groups & Diversification{% endblock %}
+{% block title %}Stock Groups & Co-Movement Clusters{% endblock %}
 {% block page_title %}🎨 Stock Groups & Diversification{% endblock %}
-{% block page_subtitle %}Grouping stocks that move independently so you can assemble a safer, better diversified portfolio{% endblock %}
+{% block page_subtitle %}Discover verified co-movement clusters and independent diversification groups for portfolio assembly.{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
 
-  <!-- What This Means / Why It Matters Dual Banners -->
+  <!-- Dual Mode Selector & Threshold Controls -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4 flex-wrap">
+      <div>
+        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+          Grouping Method
+        </label>
+        <div class="inline-flex p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold">
+          <button id="group-tab-comove" onclick="switchGroupTab('comove')" class="px-3 py-1 rounded-lg bg-indigo-600 text-white shadow-xs transition-colors">
+            🔗 Co-Moving Clusters (Move Together)
+          </button>
+          <button id="group-tab-coloring" onclick="switchGroupTab('coloring')" class="px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors">
+            🛡️ Diversification Groups (Independent Sets)
+          </button>
+        </div>
+      </div>
+
+      <div class="h-8 w-px bg-slate-200 hidden md:block"></div>
+
+      <!-- Sensitivity Threshold Slider -->
+      <div>
+        <div class="flex items-center justify-between text-[11px] mb-1">
+          <label class="text-[10px] uppercase font-bold text-slate-400">Correlation Cutoff (|r| ≥ θ)</label>
+          <span id="group-threshold-display" class="font-mono font-bold text-indigo-600 ml-2">0.70</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] text-slate-400 font-mono">0.50</span>
+          <input type="range" id="group-threshold-slider" min="0.50" max="0.90" step="0.05" value="0.70"
+                 oninput="onGroupThresholdChange(this.value)"
+                 class="w-36 sm:w-48 accent-indigo-600 cursor-pointer"/>
+          <span class="text-[10px] text-slate-400 font-mono">0.90</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="flex items-center gap-2.5 text-xs">
+      <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 font-medium">
+        <span class="text-slate-400">Total Stocks:</span>
+        <span id="group-stat-total" class="font-bold text-slate-900 ml-1 font-mono">93</span>
+      </div>
+      <div class="px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 font-medium">
+        <span class="text-indigo-600">Active Groups:</span>
+        <span id="group-stat-count" class="font-bold text-indigo-700 ml-1 font-mono">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dual Explanatory Banners -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div class="p-4 rounded-2xl bg-purple-50/70 border border-purple-100 space-y-1.5 shadow-2xs">
-      <div class="text-xs font-black text-purple-900 uppercase tracking-wide flex items-center gap-1.5">
-        <span>💡</span> WHAT THIS MEANS
+    <div class="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-1.5">
+      <div class="text-xs font-bold text-indigo-900 uppercase tracking-wide flex items-center gap-1.5">
+        <span>💡</span> HOW GROUPS ARE CALCULATED
       </div>
-      <p id="groups-what-means" class="text-xs text-purple-950 leading-relaxed">
-        Our system partitions the stock universe into distinct <strong>Diversification Groups</strong>. Stocks grouped in the same box move independently from each other during market swings.
+      <p id="group-concept-explanation" class="text-xs text-slate-700 leading-relaxed">
+        <strong>Co-Movement Clusters:</strong> Identifies stocks that historically swing together based on Pearson correlation (|r| ≥ threshold). Stocks in the same cluster share high price synchronization.
       </p>
     </div>
 
-    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 shadow-2xs">
-      <div class="text-xs font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
-        <span>🎯</span> WHY IT MATTERS
+    <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+      <div class="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+        <span>🎯</span> HOW TO USE FOR PORTFOLIOS
       </div>
-      <p id="groups-why-matters" class="text-xs text-slate-700 leading-relaxed">
-        Picking one stock from each separate group gives you genuine portfolio diversification. If one sector crashes, your other holdings are protected because their movements are disconnected.
+      <p id="group-portfolio-explanation" class="text-xs text-slate-700 leading-relaxed">
+        <strong>Diversification Strategy:</strong> To construct a resilient portfolio, pick stocks from <em>different</em> clusters rather than concentrating multiple picks in the same co-moving group.
       </p>
     </div>
   </div>
 
-  <!-- Summary KPI Row -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">Diversification Groups</div>
-      <div id="stat-chromatic" class="text-2xl font-black text-indigo-600 mt-1 font-mono">— Groups</div>
-      <div class="text-[11px] text-slate-500 mt-0.5">Distinct independent sets</div>
-    </div>
-    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">Independence Level</div>
-      <div class="text-sm font-bold text-emerald-600 mt-2 flex items-center gap-1">
-        <span>✓</span> High Diversification
-      </div>
-      <div class="text-[11px] text-slate-500 mt-0.5">Low mutual co-movement</div>
-    </div>
-    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">Total Stocks Grouped</div>
-      <div id="stat-colored-count" class="text-2xl font-black text-slate-800 mt-1 font-mono">93</div>
-      <div class="text-[11px] text-slate-500 mt-0.5">Complete universe analyzed</div>
-    </div>
-    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">Portfolio Protection</div>
-      <div class="text-2xl font-black text-purple-600 mt-1 font-mono">Maximum</div>
-      <div class="text-[11px] text-slate-500 mt-0.5">Cross-group construction</div>
-    </div>
-  </div>
-
-  <!-- Main Stock Groups Container -->
+  <!-- Main Groups Container -->
   <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-5">
     <div class="flex items-center justify-between flex-wrap gap-2">
       <div>
-        <h3 class="text-base font-bold text-slate-900">Diversification Groups</h3>
-        <p class="text-xs text-slate-500 mt-0.5">
-          To build a resilient portfolio, pick 1 stock from each box below:
+        <h3 id="main-group-title" class="text-base font-bold text-slate-900">Co-Movement Stock Clusters</h3>
+        <p id="main-group-subtitle" class="text-xs text-slate-500 mt-0.5">
+          Stocks in each card below have verified pairwise correlation meeting the cutoff:
         </p>
       </div>
-      <a href="/portfolio-lab" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition-colors">
-        Combine in Portfolio Lab →
+      <a href="/relationships" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition-colors">
+        Analyze in Relationships →
       </a>
     </div>
 
-    <div id="color-groups-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div id="groups-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
       <div class="col-span-full py-12 text-center text-slate-400">
-        <span class="animate-spin mr-2">⚙️</span> Calculating diversification groups...
+        <span class="animate-spin mr-2">⚙️</span> Calculating stock clusters...
       </div>
+    </div>
+  </div>
+
+  <!-- Unclustered Stocks Section (Singletons) -->
+  <div id="unclustered-section" class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-3">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div>
+        <h4 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <span>🛡️</span> Unclustered Stocks (Independent Diversifiers)
+        </h4>
+        <p class="text-xs text-slate-500 mt-0.5">
+          These stocks have no pairwise correlations meeting cutoff r ≥ <span id="unclustered-cutoff-label" class="font-mono font-bold">0.70</span>. They behave as natural portfolio diversifiers.
+        </p>
+      </div>
+      <span id="unclustered-badge-count" class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono font-bold text-xs">
+        0 Stocks
+      </span>
+    </div>
+
+    <div id="unclustered-stocks-container" class="flex flex-wrap gap-1.5 pt-1">
+      <!-- Unclustered badges populated dynamically -->
     </div>
   </div>
 
@@ -80,83 +123,196 @@
 
 {% block scripts %}
 <script>
-const GROUP_COLORS = [
-  { bg: 'bg-indigo-50/60', border: 'border-indigo-200', text: 'text-indigo-700', pill: 'bg-indigo-600 text-white', dot: 'bg-indigo-500' },
-  { bg: 'bg-emerald-50/60', border: 'border-emerald-200', text: 'text-emerald-700', pill: 'bg-emerald-600 text-white', dot: 'bg-emerald-500' },
-  { bg: 'bg-amber-50/60', border: 'border-amber-200', text: 'text-amber-800', pill: 'bg-amber-600 text-white', dot: 'bg-amber-500' },
-  { bg: 'bg-purple-50/60', border: 'border-purple-200', text: 'text-purple-700', pill: 'bg-purple-600 text-white', dot: 'bg-purple-500' },
-  { bg: 'bg-rose-50/60', border: 'border-rose-200', text: 'text-rose-700', pill: 'bg-rose-600 text-white', dot: 'bg-rose-500' },
-  { bg: 'bg-cyan-50/60', border: 'border-cyan-200', text: 'text-cyan-800', pill: 'bg-cyan-600 text-white', dot: 'bg-cyan-500' },
-  { bg: 'bg-teal-50/60', border: 'border-teal-200', text: 'text-teal-800', pill: 'bg-teal-600 text-white', dot: 'bg-teal-500' },
-  { bg: 'bg-orange-50/60', border: 'border-orange-200', text: 'text-orange-800', pill: 'bg-orange-600 text-white', dot: 'bg-orange-500' }
+let currentTab = 'comove'; // 'comove' | 'coloring'
+let currentThreshold = 0.70;
+let clustersData = [];
+let unclusteredData = [];
+let coloringData = null;
+
+const CLUSTER_STYLES = [
+  { bg: 'bg-indigo-50/60', border: 'border-indigo-200', text: 'text-indigo-700', pill: 'bg-indigo-600 text-white' },
+  { bg: 'bg-emerald-50/60', border: 'border-emerald-200', text: 'text-emerald-700', pill: 'bg-emerald-600 text-white' },
+  { bg: 'bg-amber-50/60', border: 'border-amber-200', text: 'text-amber-800', pill: 'bg-amber-600 text-white' },
+  { bg: 'bg-purple-50/60', border: 'border-purple-200', text: 'text-purple-700', pill: 'bg-purple-600 text-white' },
+  { bg: 'bg-rose-50/60', border: 'border-rose-200', text: 'text-rose-700', pill: 'bg-rose-600 text-white' },
+  { bg: 'bg-cyan-50/60', border: 'border-cyan-200', text: 'text-cyan-800', pill: 'bg-cyan-600 text-white' },
 ];
 
-async function loadStockGroupsPage() {
+async function loadStockGroupsData() {
   try {
-    const res = await TradeSense.apiCall('/api/coloring');
-    if (!res) return;
+    const [clusterRes, colorRes] = await Promise.all([
+      TradeSense.apiCall(`/api/clusters?threshold=${currentThreshold}`),
+      TradeSense.apiCall('/api/coloring'),
+    ]);
 
-    const numColors = res.num_colors || Object.keys(res.color_groups || {}).length || 0;
-    const totalColored = res.total_stocks_colored || Object.keys(res.coloring_dict || {}).length || 0;
+    clustersData = clusterRes?.clusters || [];
+    unclusteredData = clusterRes?.unclustered || [];
+    coloringData = colorRes;
 
-    document.getElementById('stat-chromatic').textContent = `${numColors} Groups`;
-    document.getElementById('stat-colored-count').textContent = `${totalColored} Stocks`;
+    document.getElementById('group-stat-total').textContent = clusterRes?.total_stocks || 93;
+    document.getElementById('unclustered-cutoff-label').textContent = currentThreshold.toFixed(2);
+    document.getElementById('unclustered-badge-count').textContent = `${unclusteredData.length} Stocks`;
 
-    // Render Group Cards
-    renderColorGroups(res.color_groups || {}, res.coloring_dict || {});
+    renderActiveTab();
   } catch(e) {
-    console.error("Stock groups page error:", e);
+    console.error("Stock groups load error:", e);
   }
 }
 
-function renderColorGroups(groups, dict) {
-  const container = document.getElementById('color-groups-container');
+function switchGroupTab(tab) {
+  currentTab = tab;
+  const btnComove = document.getElementById('group-tab-comove');
+  const btnColor = document.getElementById('group-tab-coloring');
+  const expConcept = document.getElementById('group-concept-explanation');
+  const expPort = document.getElementById('group-portfolio-explanation');
+  const title = document.getElementById('main-group-title');
+  const subtitle = document.getElementById('main-group-subtitle');
+  const unclusteredSec = document.getElementById('unclustered-section');
+
+  if (tab === 'comove') {
+    btnComove.className = 'px-3 py-1 rounded-lg bg-indigo-600 text-white shadow-xs transition-colors';
+    btnColor.className = 'px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors';
+    title.textContent = 'Co-Movement Stock Clusters';
+    subtitle.textContent = `Stocks in each card below share high historical co-movement (|r| ≥ ${currentThreshold.toFixed(2)}):`;
+    expConcept.innerHTML = `<strong>Co-Movement Clusters:</strong> Identifies stocks that historically swing together based on Pearson correlation (|r| ≥ ${currentThreshold.toFixed(2)}). Stocks in the same cluster share high price synchronization.`;
+    expPort.innerHTML = `<strong>Diversification Strategy:</strong> To construct a resilient portfolio, pick stocks from <em>different</em> clusters rather than concentrating multiple picks in the same co-moving group.`;
+    if (unclusteredSec) unclusteredSec.classList.remove('hidden');
+  } else {
+    btnColor.className = 'px-3 py-1 rounded-lg bg-indigo-600 text-white shadow-xs transition-colors';
+    btnComove.className = 'px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors';
+    title.textContent = 'Diversification Groups (Graph Coloring Independent Sets)';
+    subtitle.textContent = 'Each box contains mutually independent stocks that share NO strong co-movement edges:';
+    expConcept.innerHTML = `<strong>Independent Sets (Graph Coloring):</strong> Partitions the market so stocks in the same color group share <em>zero</em> strong co-movement edges.`;
+    expPort.innerHTML = `<strong>Portfolio Construction:</strong> Select 1 stock from each box below. Because stocks of different colors are independent, this directly maximizes asset diversification.`;
+    if (unclusteredSec) unclusteredSec.classList.add('hidden');
+  }
+
+  renderActiveTab();
+}
+
+function onGroupThresholdChange(val) {
+  currentThreshold = parseFloat(val);
+  document.getElementById('group-threshold-display').textContent = currentThreshold.toFixed(2);
+  loadStockGroupsData();
+}
+
+function renderActiveTab() {
+  const container = document.getElementById('groups-cards-container');
+  const statCount = document.getElementById('group-stat-count');
   if (!container) return;
 
-  const entries = Object.entries(groups);
-  if (entries.length === 0) {
-    container.innerHTML = `<div class="col-span-full py-8 text-center text-slate-400">No stock groups calculated.</div>`;
+  if (currentTab === 'comove') {
+    statCount.textContent = `${clustersData.length} Clusters`;
+
+    if (clustersData.length === 0) {
+      container.innerHTML = `
+        <div class="col-span-full py-8 text-center text-slate-400 text-xs">
+          No multi-stock clusters qualify at r ≥ ${currentThreshold.toFixed(2)}.<br>
+          <span class="text-slate-500">All stocks are behaving as independent diversifiers under this cutoff.</span>
+        </div>`;
+    } else {
+      container.innerHTML = clustersData.map((c, idx) => {
+        const style = CLUSTER_STYLES[idx % CLUSTER_STYLES.length];
+        return `
+          <div class="rounded-2xl border-2 ${style.border} ${style.bg} p-5 space-y-3 flex flex-col justify-between shadow-2xs">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="px-3 py-1 rounded-full text-xs font-black ${style.pill} flex items-center gap-1.5">
+                  <span>●</span> Co-Movement Cluster #${c.cluster_id || (idx + 1)}
+                </span>
+                <span class="text-xs font-mono font-bold ${style.text}">
+                  ${c.size} Stocks
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-600 leading-normal">
+                Led by <strong>${c.lead_stock?.replace('.NS', '')}</strong>. Verified pairwise co-movement (avg r = <strong>${Number(c.avg_correlation).toFixed(2)}</strong>).
+              </p>
+              <div class="flex flex-wrap gap-1.5 pt-1">
+                ${c.members.map(s => `
+                  <span class="px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-800 font-mono font-bold text-xs">
+                    ${s.replace('.NS', '')}
+                  </span>
+                `).join('')}
+              </div>
+            </div>
+            <div class="pt-2 border-t border-slate-200/50 flex justify-between items-center text-[11px]">
+              <span class="text-slate-500">Cohesion: <strong>${c.cohesion_level || 'Strong'}</strong></span>
+              <a href="/relationships" class="text-indigo-600 hover:text-indigo-800 font-bold underline">
+                View in Network & Heatmap →
+              </a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    renderUnclusteredBadges();
+  } else {
+    // Graph coloring groups
+    const colorGroups = coloringData?.color_groups || {};
+    const entries = Object.entries(colorGroups);
+    statCount.textContent = `${entries.length} Groups`;
+
+    if (entries.length === 0) {
+      container.innerHTML = `<div class="col-span-full py-8 text-center text-slate-400 text-xs">No graph coloring groups available.</div>`;
+      return;
+    }
+
+    container.innerHTML = entries.map(([grpKey, stocks], idx) => {
+      const style = CLUSTER_STYLES[idx % CLUSTER_STYLES.length];
+      const grpNum = parseInt(grpKey) + 1 || (idx + 1);
+      return `
+        <div class="rounded-2xl border-2 ${style.border} ${style.bg} p-5 space-y-3 flex flex-col justify-between shadow-2xs">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-3 py-1 rounded-full text-xs font-black ${style.pill} flex items-center gap-1.5">
+                <span>●</span> Diversification Group #${grpNum}
+              </span>
+              <span class="text-xs font-mono font-bold ${style.text}">
+                ${stocks.length} Stocks
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-600 leading-normal">
+              Mutually independent set. Stocks in this box share no strong co-movement edges.
+            </p>
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              ${stocks.map(s => `
+                <span class="px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-800 font-mono font-bold text-xs">
+                  ${s.replace('.NS', '')}
+                </span>
+              `).join('')}
+            </div>
+          </div>
+          <div class="pt-2 border-t border-slate-200/50 flex justify-between items-center text-[11px] text-emerald-700 font-medium">
+            <span>✓ Verified Independent Set</span>
+            <span>Pick 1 Stock</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function renderUnclusteredBadges() {
+  const container = document.getElementById('unclustered-stocks-container');
+  if (!container) return;
+
+  if (unclusteredData.length === 0) {
+    container.innerHTML = `<span class="text-slate-400 text-xs">Every stock belongs to a cluster.</span>`;
     return;
   }
 
-  container.innerHTML = entries.map(([grpKey, stocks], idx) => {
-    const style = GROUP_COLORS[idx % GROUP_COLORS.length];
-    const grpNum = parseInt(grpKey) + 1 || (idx + 1);
-
+  container.innerHTML = unclusteredData.map(u => {
+    const sym = typeof u === 'string' ? u : u.ticker;
+    const clean = sym.replace('.NS', '');
     return `
-      <div class="rounded-2xl border-2 ${style.border} ${style.bg} p-5 space-y-3 flex flex-col justify-between shadow-2xs">
-        <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="px-3 py-1 rounded-full text-xs font-black ${style.pill} flex items-center gap-1.5">
-              <span>●</span> Diversification Group #${grpNum}
-            </span>
-            <span class="text-xs font-mono font-bold ${style.text}">
-              ${stocks.length} Stocks
-            </span>
-          </div>
-
-          <p class="text-[11px] text-slate-600 leading-normal">
-            Low cross-asset correlation. Select 1 stock from this group to combine with other groups.
-          </p>
-
-          <div class="flex flex-wrap gap-1.5 pt-1">
-            ${stocks.map(s => `
-              <a href="/stock-explorer" onclick="localStorage.setItem('selected_stock', '${s}')" class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-800 font-mono font-bold text-xs hover:border-indigo-400 hover:text-indigo-600 transition-colors shadow-2xs">
-                ${s.replace('.NS','')}
-              </a>
-            `).join('')}
-          </div>
-        </div>
-
-        <div class="pt-2 border-t border-slate-200/50 flex justify-between items-center text-[11px] text-slate-500 font-sans">
-          <span>Diversification Safety:</span>
-          <span class="font-bold text-emerald-600">✓ Verified Independent</span>
-        </div>
-      </div>
+      <span class="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 font-mono text-xs font-bold" title="${typeof u === 'object' && u.reason ? u.reason : 'Independent'}">
+        ${clean}
+      </span>
     `;
   }).join('');
 }
 
-document.addEventListener('DOMContentLoaded', loadStockGroupsPage);
+document.addEventListener('DOMContentLoaded', loadStockGroupsData);
 </script>
 {% endblock %}

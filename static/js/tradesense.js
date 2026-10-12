@@ -258,9 +258,17 @@ window.TradeSense = (function() {
 
     // Edge lines
     const edgeX = [], edgeY = [];
+    const edgeMidX = [], edgeMidY = [], edgeMidText = [];
     edges.forEach(e => {
       const s = pos[e.source], t = pos[e.target];
-      if (s && t) { edgeX.push(s.x, t.x, null); edgeY.push(s.y, t.y, null); }
+      if (s && t) {
+        edgeX.push(s.x, t.x, null);
+        edgeY.push(s.y, t.y, null);
+        edgeMidX.push((s.x + t.x) / 2);
+        edgeMidY.push((s.y + t.y) / 2);
+        const wStr = e.weight !== undefined ? Number(e.weight).toFixed(3) : '0.70';
+        edgeMidText.push(`${e.source.replace('.NS', '')} ↔ ${e.target.replace('.NS', '')}<br><b>Pearson r = ${wStr}</b>`);
+      }
     });
 
     const palette = ['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ec4899','#8b5cf6','#06b6d4','#84cc16','#f97316','#64748b'];
@@ -268,15 +276,21 @@ window.TradeSense = (function() {
     const topHub = stats.most_connected_stock;
 
     // Node sizing based on degree
-    const nodeSizes = tickers.map(t => Math.min(12 + (degrees[t] || 0) * 2.2, 24));
+    const nodeSizes = tickers.map(t => Math.min(13 + (degrees[t] || 0) * 2.5, 26));
     const nodeColors = tickers.map(t => palette[(coloring_dict[t] || 0) % palette.length]);
 
-    // Show labels only for hubs or if universe is small, avoiding overlapping clutter
+    // Show labels for small universes or well-connected hubs
     const nodeLabels = tickers.map(t => (N <= 20 || (degrees[t] || 0) >= 3 || t === topHub) ? t.replace('.NS','') : '');
 
     const edgeTrace = {
       type: 'scatter', x: edgeX, y: edgeY, mode: 'lines',
-      line: { width: 1.2, color: '#cbd5e1' }, hoverinfo: 'none', showlegend: false
+      line: { width: 1.8, color: '#818cf8' }, hoverinfo: 'none', showlegend: false
+    };
+
+    const edgeHoverTrace = {
+      type: 'scatter', x: edgeMidX, y: edgeMidY, mode: 'markers',
+      marker: { size: 6, color: 'rgba(0,0,0,0)' },
+      hoverinfo: 'text', text: edgeMidText, showlegend: false
     };
 
     const nodeTrace = {
@@ -287,17 +301,18 @@ window.TradeSense = (function() {
       text: nodeLabels,
       textposition: 'top center',
       textfont: { size: 10, family: 'Inter', color: '#1e293b', weight: 'bold' },
-      marker: { size: nodeSizes, color: nodeColors, line: { width: 1.5, color: '#ffffff' } },
-      hovertemplate: tickers.map(t => `<b>${t.replace('.NS','')}</b><br>Degree: ${degrees[t] || 0}<br>Group: ${(coloring_dict[t] || 0) + 1}<extra></extra>`),
+      marker: { size: nodeSizes, color: nodeColors, line: { width: 1.8, color: '#ffffff' } },
+      hovertemplate: tickers.map(t => `<b>${t.replace('.NS','')}</b><br>Degree (Connections): <b>${degrees[t] || 0}</b><br>Group: <b>${(coloring_dict[t] || 0) + 1}</b><extra></extra>`),
+      customdata: tickers,
       showlegend: false
     };
 
-    Plotly.newPlot(el, [edgeTrace, nodeTrace], {
+    Plotly.react(el, [edgeTrace, edgeHoverTrace, nodeTrace], {
       showlegend: false,
       margin: { t: 20, l: 20, r: 20, b: 20 },
       dragmode: 'pan',
-      xaxis: { showgrid: false, zeroline: false, showticklabels: false },
-      yaxis: { showgrid: false, zeroline: false, showticklabels: false },
+      xaxis: { showgrid: false, zeroline: false, showticklabels: false, range: [-1.15, 1.15] },
+      yaxis: { showgrid: false, zeroline: false, showticklabels: false, range: [-1.15, 1.15] },
       paper_bgcolor: 'white',
       plot_bgcolor: '#f8fafc',
     }, { responsive: true, displayModeBar: true, displaylogo: false });
@@ -307,32 +322,57 @@ window.TradeSense = (function() {
   function renderHasseDiagram(containerId, hasseData) {
     const el = document.getElementById(containerId);
     if (!el || !hasseData) return;
-    const layout   = hasseData.layout || {};
-    const edges    = hasseData.cover_relation || [];
-    const tickers  = hasseData.tickers || Object.keys(layout);
+    const layout = hasseData.layout || {};
+    const edges = hasseData.cover_relation || [];
+    const tickers = hasseData.tickers || Object.keys(layout);
+    const maxElements = new Set(hasseData.maximal_elements || []);
+    const minElements = new Set(hasseData.minimal_elements || []);
+    const metrics = hasseData.stock_metrics || {};
 
     const edgeX = [], edgeY = [];
     edges.forEach(e => {
       const s = layout[e.from], t = layout[e.to];
       if (s && t) { edgeX.push(s[0], t[0], null); edgeY.push(s[1], t[1], null); }
     });
-    const edgeTrace = { type: 'scatter', x: edgeX, y: edgeY, mode: 'lines',
-      line: { width: 2, color: '#6366f1' }, hoverinfo: 'none' };
+    const edgeTrace = {
+      type: 'scatter', x: edgeX, y: edgeY, mode: 'lines',
+      line: { width: 2.2, color: '#6366f1' }, hoverinfo: 'none'
+    };
+
+    const nodeColors = tickers.map(t => {
+      if (maxElements.has(t)) return '#10b981'; // Emerald (Maximal)
+      if (minElements.has(t)) return '#94a3b8'; // Slate (Minimal)
+      return '#4f46e5'; // Indigo (Intermediate)
+    });
+
     const nodeTrace = {
       type: 'scatter',
       x: tickers.map(t => layout[t] ? layout[t][0] : 0.5),
       y: tickers.map(t => layout[t] ? layout[t][1] : 0.5),
-      mode: 'markers+text', text: tickers.map(t => t.replace('.NS','')),
-      textposition: 'top center', textfont: { size: 11 },
-      marker: { size: 20, color: '#4f46e5', line: { width: 2, color: '#fff' } },
-      hovertemplate: '%{text}<extra></extra>',
+      mode: 'markers+text',
+      text: tickers.map(t => t.replace('.NS','')),
+      textposition: 'top center',
+      textfont: { size: 10, family: 'Inter', color: '#0f172a', weight: 'bold' },
+      marker: { size: 22, color: nodeColors, line: { width: 2, color: '#ffffff' } },
+      hovertemplate: tickers.map(t => {
+        const m = metrics[t] || {};
+        const ret = m.return_pct !== undefined ? `${m.return_pct.toFixed(1)}%` : '—';
+        const risk = m.risk_pct !== undefined ? `${m.risk_pct.toFixed(1)}%` : '—';
+        return `<b>${t.replace('.NS','')}</b><br>Return: <b>${ret}</b> | Risk: <b>${risk}</b><extra></extra>`;
+      }),
     };
-    Plotly.newPlot(el, [edgeTrace, nodeTrace], {
-      showlegend: false, margin: { t: 30, l: 60, r: 60, b: 30 },
+    Plotly.react(el, [edgeTrace, nodeTrace], {
+      showlegend: false, margin: { t: 30, l: 30, r: 30, b: 30 },
+      dragmode: 'pan',
       xaxis: { showgrid: false, zeroline: false, showticklabels: false },
       yaxis: { showgrid: false, zeroline: false, showticklabels: false },
-      paper_bgcolor: 'white', plot_bgcolor: 'white',
-    }, { responsive: true });
+      paper_bgcolor: 'white', plot_bgcolor: '#f8fafc',
+    }, { responsive: true, displayModeBar: true, displaylogo: false });
+  }
+
+  function resetNetworkView(containerId) {
+    const el = document.getElementById(containerId);
+    if (el) Plotly.relayout(el, { 'xaxis.autorange': true, 'yaxis.autorange': true });
   }
 
   // ── Plotly: Radar Chart ──────────────────────────────────────────────────
@@ -536,7 +576,7 @@ window.TradeSense = (function() {
   return {
     apiCall, showLoading, hideLoading,
     formatNumber, formatPercent, formatCurrency, setDataModeBadge, initMarketStatus,
-    renderCorrelationHeatmap, renderNetworkGraph, renderHasseDiagram,
+    renderCorrelationHeatmap, renderNetworkGraph, renderHasseDiagram, resetNetworkView,
     renderPortfolioRadar, renderPriceChart, renderPortfolioCards,
     updateKpiCards, openDataSourceModal, closeDataSourceModal, triggerRefresh,
     toggleSidebar, closeSidebarMobile, openDeviceModal, closeDeviceModal, copyDeviceLink,

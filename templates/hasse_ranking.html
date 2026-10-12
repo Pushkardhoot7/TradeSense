@@ -1,115 +1,200 @@
 {% extends "base.html" %}
 
-{% block title %}Hasse & Ranking — Partially Ordered Sets{% endblock %}
-{% block page_title %}📐 Hasse & Ranking (Poset Theory){% endblock %}
-{% block page_subtitle %}Discovering Pareto dominance, transitive reduction, and topological hierarchy ranking{% endblock %}
+{% block title %}Hasse & Ranking — Stock Dominance Hierarchy{% endblock %}
+{% block page_title %}📐 Hasse & Dominance Hierarchy{% endblock %}
+{% block page_subtitle %}Discovering which stocks systematically outperform peers under risk-adjusted return criteria.{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
 
-  <!-- Mathematical Properties Verification Banner -->
+  <!-- ── Phase 8: Plain-Language Ranking Principles (No Raw Formulas) ──── -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200 space-y-1">
       <div class="flex items-center justify-between">
-        <span class="text-[10px] font-bold uppercase text-slate-400">Reflexive</span>
-        <span id="prop-refl-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ Valid</span>
+        <span class="text-[10px] font-bold uppercase text-slate-400">Consistency</span>
+        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ Verified</span>
       </div>
-      <div class="text-xs font-bold text-slate-800">A ≽ A holds ∀ A</div>
-      <div class="text-[11px] text-slate-500">Every stock matches its own metrics.</div>
+      <div class="text-xs font-bold text-slate-800">Self-Consistent Profiles</div>
+      <div class="text-[11px] text-slate-500">Every stock is evaluated consistently against its own return and risk.</div>
     </div>
 
     <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200 space-y-1">
       <div class="flex items-center justify-between">
-        <span class="text-[10px] font-bold uppercase text-slate-400">Antisymmetric</span>
-        <span id="prop-anti-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ Valid</span>
+        <span class="text-[10px] font-bold uppercase text-slate-400">Hierarchy</span>
+        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ Verified</span>
       </div>
-      <div class="text-xs font-bold text-slate-800">A ≽ B ∧ B ≽ A ⇒ A = B</div>
-      <div class="text-[11px] text-slate-500">No cyclic dominance (up to ties).</div>
+      <div class="text-xs font-bold text-slate-800">No Circular Conflicts</div>
+      <div class="text-[11px] text-slate-500">Two different stocks cannot dominate each other simultaneously.</div>
     </div>
 
     <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200 space-y-1">
       <div class="flex items-center justify-between">
-        <span class="text-[10px] font-bold uppercase text-slate-400">Transitive</span>
-        <span id="prop-trans-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ Valid</span>
+        <span class="text-[10px] font-bold uppercase text-slate-400">Transitivity</span>
+        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">✓ Verified</span>
       </div>
-      <div class="text-xs font-bold text-slate-800">A ≽ B ∧ B ≽ C ⇒ A ≽ C</div>
-      <div class="text-[11px] text-slate-500">Guarantees consistent ranking hierarchy.</div>
+      <div class="text-xs font-bold text-slate-800">Transitive Outperformance</div>
+      <div class="text-[11px] text-slate-500">If Stock A beats B, and B beats C, Stock A systematically outperforms C.</div>
     </div>
 
     <div class="kpi-card p-4 rounded-xl bg-indigo-900 text-white border border-indigo-800 space-y-1">
       <div class="flex items-center justify-between">
-        <span class="text-[10px] font-bold uppercase text-indigo-300">Poset Verdict</span>
-        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-400 text-slate-950 font-mono">POSET TRUE</span>
+        <span class="text-[10px] font-bold uppercase text-indigo-300">Hierarchy State</span>
+        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-400 text-slate-950 font-mono">ORDER VALID</span>
       </div>
-      <div class="text-xs font-bold text-white">Partially Ordered Set</div>
-      <div class="text-[11px] text-indigo-200">Enables Transitive Reduction DAG.</div>
+      <div class="text-xs font-bold text-white">Dominance DAG Active</div>
+      <div class="text-[11px] text-indigo-200">Redundant transitive paths eliminated.</div>
     </div>
   </div>
 
-  <!-- Hasse Diagram & Dominance Pairs Grid -->
+  <!-- ── Phase 9: Focused Stock & Subset Selector ───────────────────────── -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4 flex-wrap">
+      <div>
+        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+          Hasse Focus View
+        </label>
+        <div class="flex items-center gap-2">
+          <select id="hasse-view-mode" onchange="onHasseModeChange(this.value)" class="text-xs border border-slate-200 rounded-xl px-3 py-1.5 bg-white font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500">
+            <option value="maximal">Top Tiers & Maximal Stocks (Recommended)</option>
+            <option value="focus">Single Stock Focus & Dominance Path</option>
+            <option value="sector">By Market Sector</option>
+            <option value="all">Full Market Universe</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Focus Stock Select (shown when in focus mode) -->
+      <div id="hasse-stock-select-container" class="hidden">
+        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+          Focus Stock
+        </label>
+        <select id="hasse-stock-select" onchange="onFocusStockSelect(this.value)" class="text-xs border border-slate-200 rounded-xl px-3 py-1.5 bg-white font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500">
+          <option value="">Select a stock...</option>
+        </select>
+      </div>
+
+      <!-- Sector Select (shown when in sector mode) -->
+      <div id="hasse-sector-select-container" class="hidden">
+        <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">
+          Filter by Sector
+        </label>
+        <select id="hasse-sector-select" onchange="onSectorSelect(this.value)" class="text-xs border border-slate-200 rounded-xl px-3 py-1.5 bg-white font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500">
+          <option value="">Select sector...</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Graph Navigation Controls -->
+    <div class="flex items-center gap-2 text-xs">
+      <button onclick="fitHasseScreen()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors">
+        🔍 Fit Screen
+      </button>
+      <button onclick="resetHasseView()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors">
+        ↺ Reset View
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Hasse Diagram & Dominance Pairs Grid ───────────────────────────── -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
     <!-- Hasse Diagram Visualization (8 cols) -->
     <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div>
-          <h3 class="text-sm font-bold text-slate-900">Hasse Diagram (Transitive Reduction DAG)</h3>
-          <p class="text-xs text-slate-500 mt-0.5">Top level nodes are Maximal (Non-dominated). Edges flow downward from dominator to dominated.</p>
+          <h3 class="text-sm font-bold text-slate-900">Hasse Diagram Hierarchy</h3>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Higher nodes dominate connected lower nodes (higher return, lower or equal risk). Click any node to isolate relationships.
+          </p>
         </div>
+        <span id="hasse-elements-badge" class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono font-bold text-xs">
+          Loading...
+        </span>
       </div>
 
       <!-- Plotly Hasse Diagram Container -->
-      <div id="hasse-plot" class="w-full h-[520px] rounded-xl overflow-hidden">
+      <div id="hasse-plot" class="w-full h-[520px] rounded-xl overflow-hidden bg-slate-50 relative">
         <div class="flex items-center justify-center h-full text-slate-400 text-xs">
-          <span class="animate-spin mr-2">⚙️</span> Computing Transitive Reduction & Hasse DAG...
+          <span class="animate-spin mr-2">⚙️</span> Computing Dominance Hierarchy...
         </div>
+      </div>
+
+      <!-- Visual Legend -->
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-600">
+        <div class="flex items-center gap-4 flex-wrap">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+            <span>Maximal Elements (Pareto Optimal)</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-indigo-600 inline-block"></span>
+            <span>Intermediate Stocks</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-4 h-0.5 bg-indigo-500 inline-block"></span>
+            <span>Dominance Path (Top beats Bottom)</span>
+          </div>
+        </div>
+        <span class="text-[10px] text-slate-400 font-medium">Click node to inspect metrics</span>
       </div>
     </div>
 
     <!-- Poset Tiers & Dominance Pairs (4 cols) -->
-    <div class="lg:col-span-4 space-y-6">
+    <div class="lg:col-span-4 space-y-5">
 
       <!-- Maximal & Minimal Tiers Card -->
       <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
         <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-100 pb-2.5">
-          Poset Structural Elements
+          Hierarchy Tiers
         </h4>
 
-        <div class="space-y-3">
-          <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 space-y-1">
+        <div class="space-y-3 text-xs">
+          <div class="p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 space-y-1">
             <div class="text-[10px] font-bold uppercase text-emerald-800 flex items-center gap-1">
-              <span>👑</span> Maximal Elements (Pareto Optimal)
+              <span>👑</span> Maximal Stocks (Pareto Optimal)
             </div>
-            <div id="maximal-list" class="text-xs font-mono font-bold text-emerald-950">Loading...</div>
-            <p class="text-[10px] text-emerald-800/80">No stock beats these in both return & risk.</p>
+            <div id="maximal-list" class="text-xs font-mono font-bold text-emerald-950 flex flex-wrap gap-1 pt-1">Loading...</div>
+            <p class="text-[10px] text-emerald-800/80 pt-1">
+              No other stock achieves both higher returns and lower risk.
+            </p>
           </div>
 
-          <div class="p-3 bg-rose-50 rounded-xl border border-rose-200 space-y-1">
-            <div class="text-[10px] font-bold uppercase text-rose-800 flex items-center gap-1">
-              <span>⚠️</span> Minimal Elements (Bottom Tier)
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+            <div class="text-[10px] font-bold uppercase text-slate-700 flex items-center gap-1">
+              <span>📉</span> Minimal Stocks (Bottom Tier)
             </div>
-            <div id="minimal-list" class="text-xs font-mono font-bold text-rose-950">Loading...</div>
-            <p class="text-[10px] text-rose-800/80">Dominated by higher level assets.</p>
+            <div id="minimal-list" class="text-xs font-mono font-bold text-slate-800 flex flex-wrap gap-1 pt-1">Loading...</div>
+            <p class="text-[10px] text-slate-500 pt-1">
+              Systematically dominated by higher level assets.
+            </p>
           </div>
         </div>
       </div>
 
-      <!-- Verified Dominance Relations -->
+      <!-- Verified Dominance Relations Panel (Phase 10) -->
       <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
         <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Dominance Pairs</h4>
-          <span id="pairs-count-badge" class="text-[10px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-            Cover Edges
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Dominance Pairs</h4>
+            <p class="text-[10px] text-slate-400">Strict return & risk outperformance</p>
+          </div>
+          <span id="pairs-count-badge" class="text-[10px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+            0 Pairs
           </span>
         </div>
 
-        <div id="hasse-pairs-list" class="space-y-2 text-xs max-h-56 overflow-y-auto">
-          <!-- Populated via JS -->
+        <div id="hasse-pairs-list" class="space-y-2 text-xs max-h-60 overflow-y-auto pr-1">
+          <!-- Populated dynamically -->
         </div>
       </div>
 
     </div>
 
+  </div>
+
+  <!-- Focused Stock Detail Inspection Panel -->
+  <div id="hasse-stock-detail-panel" class="hidden bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
+    <!-- Populated dynamically -->
   </div>
 
 </div>
@@ -117,51 +202,332 @@
 
 {% block scripts %}
 <script>
+let fullHasseData = null;
+let activeHasseData = null;
+let currentFocusStock = null;
+let currentMode = 'maximal';
+
 async function loadHassePage() {
   try {
-    const hasseRes = await TradeSense.apiCall('/api/hasse');
-    const relationRes = await TradeSense.apiCall('/api/relation');
+    const res = await TradeSense.apiCall('/api/hasse');
+    if (!res) return;
+    fullHasseData = res;
 
-    // Poset Props
-    const poset = relationRes?.poset || {};
-    if (poset.is_reflexive !== undefined) {
-      document.getElementById('prop-refl-badge').textContent = poset.is_reflexive ? '✓ Valid' : '✗ Viol';
-    }
-    if (poset.is_antisymmetric !== undefined) {
-      document.getElementById('prop-anti-badge').textContent = poset.is_antisymmetric ? '✓ Valid' : '✗ Viol';
-    }
-    if (poset.is_transitive !== undefined) {
-      document.getElementById('prop-trans-badge').textContent = poset.is_transitive ? '✓ Valid' : '✗ Viol';
-    }
+    // Populate stock dropdown
+    populateStockDropdown(res.all_tickers || res.tickers || []);
+    populateSectorDropdown();
 
-    // Maximal & Minimal
-    const maximal = hasseRes?.maximal_elements || relationRes?.maximal_elements || [];
-    const minimal = hasseRes?.minimal_elements || relationRes?.minimal_elements || [];
-    document.getElementById('maximal-list').textContent = maximal.join(', ') || 'None';
-    document.getElementById('minimal-list').textContent = minimal.join(', ') || 'None';
-
-    // Render Hasse Diagram
-    TradeSense.renderHasseDiagram('hasse-plot', hasseRes);
-
-    // Render Cover Pairs
-    const pairs = hasseRes?.cover_relation || relationRes?.dominance_pairs || [];
-    const container = document.getElementById('hasse-pairs-list');
-    if (container) {
-      container.innerHTML = pairs.map(p => {
-        const u = Array.isArray(p) ? p[0] : (p.dominator || p.from);
-        const v = Array.isArray(p) ? p[1] : (p.dominated || p.to);
-        return `
-          <div class="p-2 bg-slate-50 rounded-lg border border-slate-200 flex justify-between items-center font-mono">
-            <span class="font-bold text-indigo-600">${u}</span>
-            <span class="text-slate-400 text-[10px]">≽ dominates ≽</span>
-            <span class="font-bold text-slate-700">${v}</span>
-          </div>
-        `;
-      }).join('');
-    }
+    // Default to maximal / top tiers view for clean readability
+    applyHasseFilter('maximal');
   } catch(e) {
-    console.error("Hasse page error:", e);
+    console.error("Hasse load error:", e);
   }
+}
+
+function populateStockDropdown(tickers) {
+  const sel = document.getElementById('hasse-stock-select');
+  if (!sel) return;
+  sel.innerHTML = `<option value="">-- Select Focus Stock --</option>` +
+    tickers.map(t => `<option value="${t}">${t.replace('.NS', '')} (${t})</option>`).join('');
+}
+
+async function populateSectorDropdown() {
+  try {
+    const secRes = await TradeSense.apiCall('/api/sectors/analysis');
+    const sel = document.getElementById('hasse-sector-select');
+    if (!sel || !secRes?.sectors) return;
+    sel.innerHTML = `<option value="">-- Choose a Sector --</option>` +
+      secRes.sectors.map(s => `<option value="${s.sector}">${s.sector}</option>`).join('');
+  } catch(e) {}
+}
+
+function onHasseModeChange(mode) {
+  currentMode = mode;
+  document.getElementById('hasse-stock-select-container').classList.toggle('hidden', mode !== 'focus');
+  document.getElementById('hasse-sector-select-container').classList.toggle('hidden', mode !== 'sector');
+  applyHasseFilter(mode);
+}
+
+function onFocusStockSelect(stock) {
+  currentFocusStock = stock;
+  if (!stock) {
+    applyHasseFilter('maximal');
+    return;
+  }
+  // Filter Hasse subset to this stock + its dominators + its dominated stocks
+  const covers = fullHasseData.cover_relation || [];
+  const dominators = covers.filter(c => c.to === stock).map(c => c.from);
+  const dominated = covers.filter(c => c.from === stock).map(c => c.to);
+  const subset = Array.from(new Set([stock, ...dominators, ...dominated]));
+
+  fetchAndRenderSubset(subset.join(','));
+  renderStockDetail(stock, dominators, dominated);
+}
+
+async function onSectorSelect(sectorName) {
+  if (!sectorName) return;
+  try {
+    const secRes = await TradeSense.apiCall('/api/sectors/analysis');
+    const sec = secRes?.sectors?.find(s => s.sector === sectorName);
+    if (sec && sec.stock_symbols) {
+      fetchAndRenderSubset(sec.stock_symbols.join(','));
+    }
+  } catch(e) {}
+}
+
+async function applyHasseFilter(mode) {
+  if (mode === 'maximal') {
+    // Show maximal elements and top-tier stocks (up to 15 stocks)
+    const maxList = fullHasseData.maximal_elements || [];
+    const covers = fullHasseData.cover_relation || [];
+    const directBelow = covers.filter(c => maxList.includes(c.from)).map(c => c.to);
+    const subset = Array.from(new Set([...maxList, ...directBelow])).slice(0, 16);
+    fetchAndRenderSubset(subset.join(','));
+  } else if (mode === 'all') {
+    renderHasseDiagram(fullHasseData);
+  }
+}
+
+async function fetchAndRenderSubset(subsetStr) {
+  try {
+    const subRes = await TradeSense.apiCall(`/api/hasse?subset=${encodeURIComponent(subsetStr)}`);
+    renderHasseDiagram(subRes);
+  } catch(e) {
+    renderHasseDiagram(fullHasseData);
+  }
+}
+
+function renderHasseDiagram(data) {
+  activeHasseData = data;
+  const el = document.getElementById('hasse-plot');
+  if (!el || !data) return;
+
+  const layout = data.layout || {};
+  const edges = data.cover_relation || [];
+  const tickers = data.tickers || Object.keys(layout);
+  const maxElements = new Set(data.maximal_elements || []);
+  const minElements = new Set(data.minimal_elements || []);
+  const metrics = data.stock_metrics || {};
+
+  document.getElementById('hasse-elements-badge').textContent = `${tickers.length} Stocks · ${edges.length} Hierarchy Edges`;
+
+  // Update Tiers Cards
+  renderTiersCards(data.maximal_elements || [], data.minimal_elements || []);
+  renderDominancePairs(edges, metrics);
+
+  if (tickers.length === 0) {
+    el.innerHTML = `<div class="flex items-center justify-center h-full text-slate-400 text-xs">No elements in selected hierarchy.</div>`;
+    return;
+  }
+
+  // Edge lines
+  const edgeX = [], edgeY = [];
+  edges.forEach(e => {
+    const s = layout[e.from], t = layout[e.to];
+    if (s && t) {
+      edgeX.push(s[0], t[0], null);
+      edgeY.push(s[1], t[1], null);
+    }
+  });
+
+  const edgeTrace = {
+    type: 'scatter',
+    x: edgeX,
+    y: edgeY,
+    mode: 'lines',
+    line: { width: 2.2, color: '#6366f1' },
+    hoverinfo: 'none',
+    showlegend: false,
+  };
+
+  // Node markers
+  const nodeX = [], nodeY = [];
+  const nodeText = [], nodeHover = [];
+  const nodeColors = [], nodeSizes = [], nodeBorders = [];
+
+  tickers.forEach(t => {
+    const p = layout[t] || [0.5, 0.5];
+    nodeX.push(p[0]);
+    nodeY.push(p[1]);
+
+    const clean = t.replace('.NS', '');
+    nodeText.push(clean);
+
+    const m = metrics[t] || {};
+    const retStr = m.return_pct !== undefined ? `${m.return_pct.toFixed(1)}%` : '—';
+    const riskStr = m.risk_pct !== undefined ? `${m.risk_pct.toFixed(1)}%` : '—';
+    const sharpeStr = m.sharpe !== undefined ? m.sharpe.toFixed(2) : '—';
+
+    let tierLabel = 'Intermediate';
+    if (maxElements.has(t)) tierLabel = 'Maximal (Pareto Optimal)';
+    else if (minElements.has(t)) tierLabel = 'Minimal (Bottom Tier)';
+
+    nodeHover.push(
+      `<b>${clean}</b> (${t})<br>` +
+      `Tier: <b>${tierLabel}</b><br>` +
+      `Return: <b>${retStr}</b> | Risk: <b>${riskStr}</b><br>` +
+      `Sharpe: <b>${sharpeStr}</b><br>` +
+      `<i>Click to isolate dominance paths</i>`
+    );
+
+    if (t === currentFocusStock) {
+      nodeColors.push('#fbbf24'); // Amber focus
+      nodeSizes.push(28);
+      nodeBorders.push('#4f46e5');
+    } else if (maxElements.has(t)) {
+      nodeColors.push('#10b981'); // Emerald
+      nodeSizes.push(24);
+      nodeBorders.push('#ffffff');
+    } else if (minElements.has(t)) {
+      nodeColors.push('#94a3b8'); // Slate
+      nodeSizes.push(18);
+      nodeBorders.push('#ffffff');
+    } else {
+      nodeColors.push('#4f46e5'); // Indigo
+      nodeSizes.push(20);
+      nodeBorders.push('#ffffff');
+    }
+  });
+
+  const nodeTrace = {
+    type: 'scatter',
+    x: nodeX,
+    y: nodeY,
+    mode: 'markers+text',
+    text: nodeText,
+    textposition: 'top center',
+    textfont: { size: 10, family: 'Inter', color: '#0f172a', weight: 'bold' },
+    marker: {
+      size: nodeSizes,
+      color: nodeColors,
+      line: { width: 2, color: nodeBorders },
+    },
+    hoverinfo: 'text',
+    hovertext: nodeHover,
+    customdata: tickers,
+    showlegend: false,
+  };
+
+  const plotLayout = {
+    showlegend: false,
+    margin: { t: 30, l: 30, r: 30, b: 30 },
+    dragmode: 'pan',
+    xaxis: { showgrid: false, zeroline: false, showticklabels: false },
+    yaxis: { showgrid: false, zeroline: false, showticklabels: false },
+    paper_bgcolor: 'white',
+    plot_bgcolor: '#f8fafc',
+  };
+
+  Plotly.react(el, [edgeTrace, nodeTrace], plotLayout, { responsive: true, displayModeBar: true, displaylogo: false }).then(() => {
+    el.removeAllListeners && el.removeAllListeners('plotly_click');
+    el.on('plotly_click', (data) => {
+      if (!data || !data.points || data.points.length === 0) return;
+      const clicked = data.points[0].customdata;
+      if (clicked) {
+        document.getElementById('hasse-view-mode').value = 'focus';
+        document.getElementById('hasse-stock-select-container').classList.remove('hidden');
+        document.getElementById('hasse-stock-select').value = clicked;
+        onFocusStockSelect(clicked);
+      }
+    });
+  });
+}
+
+function renderTiersCards(maximals, minimals) {
+  const maxEl = document.getElementById('maximal-list');
+  const minEl = document.getElementById('minimal-list');
+  if (maxEl) {
+    maxEl.innerHTML = maximals.map(m => `
+      <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-mono text-[11px] font-bold">
+        ${m.replace('.NS', '')}
+      </span>
+    `).join('') || '<span class="text-slate-400">None in selection</span>';
+  }
+  if (minEl) {
+    minEl.innerHTML = minimals.map(m => `
+      <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-800 font-mono text-[11px] font-bold">
+        ${m.replace('.NS', '')}
+      </span>
+    `).join('') || '<span class="text-slate-400">None in selection</span>';
+  }
+}
+
+function renderDominancePairs(edges, metrics) {
+  const container = document.getElementById('hasse-pairs-list');
+  const badge = document.getElementById('pairs-count-badge');
+  if (badge) badge.textContent = `${edges.length} Cover Edges`;
+  if (!container) return;
+
+  if (edges.length === 0) {
+    container.innerHTML = `<div class="p-3 bg-slate-50 text-slate-400 rounded-xl text-center">No cover dominance edges in this subset.</div>`;
+    return;
+  }
+
+  container.innerHTML = edges.map(e => {
+    const dom = e.from.replace('.NS', '');
+    const sub = e.to.replace('.NS', '');
+    const mDom = metrics[e.from] || {};
+    const mSub = metrics[e.to] || {};
+    return `
+      <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+        <div class="flex items-center justify-between font-bold text-xs">
+          <span class="text-emerald-700">${dom}</span>
+          <span class="text-slate-400 text-[10px]">dominates</span>
+          <span class="text-slate-700">${sub}</span>
+        </div>
+        <div class="flex items-center justify-between text-[10px] text-slate-500 font-mono">
+          <span>Ret: +${mDom.return_pct?.toFixed(1) || '—'}% / Risk: ${mDom.risk_pct?.toFixed(1) || '—'}%</span>
+          <span>vs</span>
+          <span>Ret: +${mSub.return_pct?.toFixed(1) || '—'}% / Risk: ${mSub.risk_pct?.toFixed(1) || '—'}%</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderStockDetail(stock, dominators, dominated) {
+  const panel = document.getElementById('hasse-stock-detail-panel');
+  if (!panel) return;
+  panel.classList.remove('hidden');
+
+  const clean = stock.replace('.NS', '');
+  panel.innerHTML = `
+    <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+      <div class="flex items-center gap-2">
+        <span class="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 font-mono font-bold text-xs">${clean}</span>
+        <span class="text-xs font-bold text-slate-800">Dominance Neighborhood</span>
+      </div>
+      <button onclick="document.getElementById('hasse-stock-detail-panel').classList.add('hidden')" class="text-xs text-slate-400 hover:text-slate-600 font-bold">&times; Close</button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+        <span class="font-bold text-rose-700 block mb-1">Dominated By (${dominators.length} stocks):</span>
+        <div class="flex flex-wrap gap-1 font-mono text-[11px]">
+          ${dominators.map(d => `<span class="px-2 py-0.5 rounded bg-white border border-slate-200">${d.replace('.NS','')}</span>`).join('') || '<span class="text-slate-400 font-sans">None (Pareto Maximal)</span>'}
+        </div>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+        <span class="font-bold text-emerald-700 block mb-1">Dominates (${dominated.length} stocks):</span>
+        <div class="flex flex-wrap gap-1 font-mono text-[11px]">
+          ${dominated.map(d => `<span class="px-2 py-0.5 rounded bg-white border border-slate-200">${d.replace('.NS','')}</span>`).join('') || '<span class="text-slate-400 font-sans">None (Bottom Tier)</span>'}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function fitHasseScreen() {
+  const el = document.getElementById('hasse-plot');
+  if (el) Plotly.relayout(el, { 'xaxis.autorange': true, 'yaxis.autorange': true });
+}
+
+function resetHasseView() {
+  currentFocusStock = null;
+  document.getElementById('hasse-view-mode').value = 'maximal';
+  document.getElementById('hasse-stock-select-container').classList.add('hidden');
+  document.getElementById('hasse-sector-select-container').classList.add('hidden');
+  document.getElementById('hasse-stock-detail-panel').classList.add('hidden');
+  applyHasseFilter('maximal');
 }
 
 document.addEventListener('DOMContentLoaded', loadHassePage);

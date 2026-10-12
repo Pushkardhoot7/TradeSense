@@ -48,13 +48,23 @@ def build_returns_matrix(
     -------
     pd.DataFrame
         Columns = ticker symbols, index = union of all trading dates.
-        Values are simple daily returns.  Leading NaN per column is
+        Values are simple daily returns. Leading NaN per column is
         expected (no day-0 return).
     """
     series_dict: dict[str, pd.Series] = {}
     for symbol, df in data_map.items():
+        if df is None or df.empty or "Close" not in df.columns:
+            continue
         close = df["Close"].dropna()
-        series_dict[symbol] = calculate_daily_returns(close)
+        # Enforce positive prices to prevent divide-by-zero or negative bases
+        close = close[close > 0]
+        # Remove duplicate dates keeping the latest observation
+        if not close.index.is_unique:
+            close = close[~close.index.duplicated(keep="last")]
+        # Ensure chronological ordering
+        close = close.sort_index()
+        if len(close) >= 2:
+            series_dict[symbol] = calculate_daily_returns(close)
 
     if not series_dict:
         return pd.DataFrame()
@@ -68,26 +78,32 @@ def build_returns_matrix(
 # Pearson correlation from scratch
 # ---------------------------------------------------------------------------
 
-def calculate_pearson_correlation(returns_df: pd.DataFrame) -> pd.DataFrame:
+def calculate_pearson_correlation(
+    returns_df: pd.DataFrame,
+    min_periods: int = 15,
+) -> pd.DataFrame:
     """Compute the Pearson correlation matrix from a returns DataFrame.
 
     Implementation uses the standard formula:
 
         r(X, Y) = cov(X, Y) / (std(X) * std(Y))
 
-    where cov and std are computed over the pairwise complete observations
+    where cov and std are computed over pairwise complete observations
     (rows where both X and Y are non-NaN).
 
     Parameters
     ----------
     returns_df:
         DataFrame of daily returns (columns = ticker symbols).
+    min_periods:
+        Minimum overlapping observations required to compute correlation.
+        Pairs with fewer than min_periods common trading days are set to NaN.
 
     Returns
     -------
     pd.DataFrame
         Square correlation matrix with tickers as both index and columns.
-        Diagonal values are exactly 1.0; off-diagonals are Pearson r.
+        Diagonal values are exactly 1.0; off-diagonals are Pearson r in [-1, 1].
     """
     tickers: list[str] = list(returns_df.columns)
     n: int = len(tickers)
@@ -111,23 +127,31 @@ def calculate_pearson_correlation(returns_df: pd.DataFrame) -> pd.DataFrame:
             xj_clean = xj[valid_mask].values.astype(float)
 
             k = len(xi_clean)
-            if k < 2:
+            # Require at least min_periods overlapping observations for statistical validity
+            if k < max(min_periods, 2):
                 corr_matrix[i][j] = float("nan")
                 continue
 
-            mean_i = xi_clean.mean()
-            mean_j = xj_clean.mean()
+            mean_i = float(xi_clean.mean())
+            mean_j = float(xj_clean.mean())
             diff_i = xi_clean - mean_i
             diff_j = xj_clean - mean_j
 
-            cov = (diff_i * diff_j).sum() / (k - 1)
-            std_i = math.sqrt((diff_i ** 2).sum() / (k - 1))
-            std_j = math.sqrt((diff_j ** 2).sum() / (k - 1))
+            denom = k - 1
+            cov = float((diff_i * diff_j).sum()) / denom
+            var_i = float((diff_i ** 2).sum()) / denom
+            var_j = float((diff_j ** 2).sum()) / denom
 
-            if std_i == 0 or std_j == 0:
+            std_i = math.sqrt(var_i) if var_i > 0 else 0.0
+            std_j = math.sqrt(var_j) if var_j > 0 else 0.0
+
+            if std_i <= 1e-12 or std_j <= 1e-12:
                 corr_matrix[i][j] = float("nan")
             else:
-                corr_matrix[i][j] = cov / (std_i * std_j)
+                raw_r = cov / (std_i * std_j)
+                # Clamp strictly to [-1.0, 1.0] to prevent floating point inaccuracies
+                clamped_r = max(-1.0, min(1.0, raw_r))
+                corr_matrix[i][j] = round(clamped_r, 6)
 
     return pd.DataFrame(corr_matrix, index=tickers, columns=tickers)
 

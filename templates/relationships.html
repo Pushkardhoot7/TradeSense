@@ -2,18 +2,115 @@
 
 {% block title %}Market Relationships — Network & Correlation Matrix{% endblock %}
 {% block page_title %}Market Relationships{% endblock %}
-{% block page_subtitle %}Explore how stocks move together and investigate historical correlation patterns.{% endblock %}
+{% block page_subtitle %}Explore co-movement patterns, correlation clusters, and market connections across selected stocks.{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
 
-  <!-- ── Top Controls & View Toggle Bar ─────────────────────────────────── -->
+  <!-- ── Phase 2: Stock & Group Selection Control Bar ───────────────────── -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+    <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
+      <div>
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <span>🔍</span> Stock & Group Selection
+        </h3>
+        <p class="text-xs text-slate-500 mt-0.5">
+          Select specific stocks, co-movement groups, or market sectors to focus the network and correlation matrix.
+        </p>
+      </div>
+      <div id="selection-status-badge" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono">
+        Default Subset (10 Stocks)
+      </div>
+    </div>
+
+    <!-- Selection Mode Buttons -->
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Mode:</span>
+        <div class="inline-flex p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold">
+          <button id="mode-btn-multi" onclick="TradeSenseMarketRel.setSelectionMode('multi')" class="px-3 py-1 rounded-lg bg-indigo-600 text-white shadow-xs transition-colors">
+            Multiple Stocks
+          </button>
+          <button id="mode-btn-single" onclick="TradeSenseMarketRel.setSelectionMode('single')" class="px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors">
+            Single Stock Focus
+          </button>
+          <button id="mode-btn-group" onclick="TradeSenseMarketRel.setSelectionMode('group')" class="px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors">
+            Stock Group (Cluster)
+          </button>
+          <button id="mode-btn-sector" onclick="TradeSenseMarketRel.setSelectionMode('sector')" class="px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors">
+            Sector
+          </button>
+          <button id="mode-btn-all" onclick="TradeSenseMarketRel.setSelectionMode('all')" class="px-3 py-1 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors">
+            All Stocks (Full Universe)
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="flex items-center gap-2 text-xs">
+        <button onclick="TradeSenseMarketRel.resetToDefaultSelection()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors">
+          Reset to Default
+        </button>
+        <button onclick="TradeSenseMarketRel.clearStockSelection()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 font-bold transition-colors">
+          Clear Selection
+        </button>
+      </div>
+    </div>
+
+    <!-- Mode Specific Selectors -->
+    <div id="selector-container" class="pt-1">
+      <!-- Searchable multi-stock bar -->
+      <div id="multi-search-panel" class="space-y-2">
+        <div class="relative">
+          <input type="text" id="stock-search-input" placeholder="Search stocks by ticker or company name (e.g. TCS, Reliance, HDFC, Infosys)..."
+                 oninput="TradeSenseMarketRel.onSearchInput(this.value)"
+                 class="w-full text-xs px-3.5 py-2 pl-9 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white"/>
+          <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
+          <div id="search-dropdown" class="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white rounded-xl border border-slate-200 shadow-lg hidden"></div>
+        </div>
+      </div>
+
+      <!-- Stock Group Selector -->
+      <div id="group-select-panel" class="hidden flex items-center gap-3 flex-wrap">
+        <label class="text-xs font-bold text-slate-700">Select Co-Movement Cluster:</label>
+        <select id="group-dropdown" onchange="TradeSenseMarketRel.onGroupSelected(this.value)" class="text-xs border border-slate-200 rounded-xl px-3 py-1.5 bg-white font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500">
+          <option value="">Loading clusters...</option>
+        </select>
+      </div>
+
+      <!-- Sector Selector -->
+      <div id="sector-select-panel" class="hidden flex items-center gap-3 flex-wrap">
+        <label class="text-xs font-bold text-slate-700">Select Market Sector:</label>
+        <select id="sector-dropdown" onchange="TradeSenseMarketRel.onSectorSelected(this.value)" class="text-xs border border-slate-200 rounded-xl px-3 py-1.5 bg-white font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500">
+          <option value="">Loading sectors...</option>
+        </select>
+      </div>
+
+      <!-- Single Stock Selector -->
+      <div id="single-select-panel" class="hidden flex items-center gap-3 flex-wrap">
+        <label class="text-xs font-bold text-slate-700">Select Focus Stock:</label>
+        <select id="single-stock-dropdown" onchange="TradeSenseMarketRel.onSingleStockSelected(this.value)" class="text-xs border border-slate-200 rounded-xl px-3 py-1.5 bg-white font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500">
+          <option value="">Choose a stock...</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Active Selected Stock Badges -->
+    <div class="pt-2 border-t border-slate-100 flex items-center gap-2 flex-wrap">
+      <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Active Stocks:</span>
+      <div id="selected-badges-container" class="flex items-center gap-1.5 flex-wrap">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sensitivity Threshold & Overview Controls ───────────────────────── -->
   <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
     <div class="flex items-center gap-4 flex-wrap">
       <!-- Sensitivity Threshold Slider -->
       <div>
         <div class="flex items-center justify-between text-[11px] mb-1">
-          <label class="text-[10px] uppercase font-bold text-slate-400">Correlation Sensitivity Threshold</label>
+          <label class="text-[10px] uppercase font-bold text-slate-400">Connection Threshold (|r| ≥ θ)</label>
           <span id="threshold-display-val" class="font-mono font-bold text-indigo-600 ml-2">0.70</span>
         </div>
         <div class="flex items-center gap-2">
@@ -36,52 +133,45 @@
       </div>
     </div>
 
-    <!-- View Mode Switcher: Simple View vs Technical View -->
-    <div class="flex items-center gap-2">
-      <span class="text-[11px] font-medium text-slate-400 hidden xs:inline">Mode:</span>
-      <div class="inline-flex p-1 rounded-xl bg-slate-100 border border-slate-200">
-        <button id="btn-view-simple" onclick="TradeSenseMarketRel.setViewMode('simple')" class="px-3 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white shadow-xs transition-colors">
-          Simple View
-        </button>
-        <button id="btn-view-technical" onclick="TradeSenseMarketRel.setViewMode('technical')" class="px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
-          Technical View
-        </button>
-      </div>
+    <!-- Graph Controls (Zoom, Fit, Reset) -->
+    <div class="flex items-center gap-2 text-xs">
+      <button onclick="TradeSenseMarketRel.fitNetworkScreen()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors" title="Fit to Screen">
+        🔍 Fit Screen
+      </button>
+      <button onclick="TradeSenseMarketRel.resetNetworkLayout()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors" title="Reset View">
+        ↺ Reset View
+      </button>
     </div>
   </div>
 
-  <!-- ── Phase 5: Four Summary KPI Cards ─────────────────────────────────── -->
+  <!-- ── Four Summary KPI Cards ─────────────────────────────────────────── -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-    <!-- Card 1: Eligible Stocks -->
     <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
-      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Eligible Stocks</div>
-      <div id="kpi-rel-stocks" class="text-2xl font-black text-slate-900 mt-1 font-mono">93</div>
-      <div class="text-[11px] text-slate-500 mt-0.5">Validated analysis universe</div>
+      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Selected Stocks</div>
+      <div id="kpi-rel-stocks" class="text-2xl font-black text-slate-900 mt-1 font-mono">10</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Active analysis subset</div>
     </div>
 
-    <!-- Card 2: Active Connections -->
     <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
       <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active Connections</div>
       <div id="kpi-rel-edges" class="text-2xl font-black text-indigo-600 mt-1 font-mono">0</div>
       <div class="text-[11px] text-slate-500 mt-0.5">Pairwise links where |r| ≥ threshold</div>
     </div>
 
-    <!-- Card 3: Network Density -->
     <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
       <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Network Density</div>
       <div id="kpi-rel-density" class="text-2xl font-black text-purple-600 mt-1 font-mono">0.0%</div>
-      <div class="text-[11px] text-slate-500 mt-0.5">Ratio of actual to possible edges</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Ratio of actual to possible connections</div>
     </div>
 
-    <!-- Card 4: Correlation Threshold -->
     <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
-      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Correlation Threshold</div>
-      <div id="kpi-rel-threshold" class="text-2xl font-black text-amber-600 mt-1 font-mono">r ≥ 0.70</div>
-      <div class="text-[11px] text-slate-500 mt-0.5">Active edge qualification cutoff</div>
+      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Avg Pairwise Correlation</div>
+      <div id="kpi-rel-avg-corr" class="text-2xl font-black text-amber-600 mt-1 font-mono">+0.32</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Mean correlation across selection</div>
     </div>
   </div>
 
-  <!-- ── Phase 5: 60/40 Split Content Row (Network + Heatmap) ─────────────── -->
+  <!-- ── 60/40 Split Content Row (Network + Heatmap) ─────────────────────── -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
     <!-- Left Column (~60% on desktop): Market Connection Network -->
@@ -89,17 +179,17 @@
       <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
         <div>
           <h3 class="text-sm font-bold text-slate-900">Market Connection Network</h3>
-          <p class="text-xs text-slate-500 mt-0.5">Force-directed topology: connected stocks cluster together</p>
+          <p class="text-xs text-slate-500 mt-0.5">Displays relationships only among your currently selected stocks</p>
         </div>
         <div class="flex items-center gap-1.5 text-[11px]">
-          <button onclick="TradeSenseMarketRel.clearSelection()" class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold transition-colors" title="Reset highlighted stock focus">
-            Reset View
-          </button>
+          <span id="network-edge-count-badge" class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono font-bold">
+            0 Edges
+          </span>
         </div>
       </div>
 
       <!-- Network Plot Container -->
-      <div id="market-network-plot" class="w-full h-[540px] rounded-xl overflow-hidden bg-slate-50 relative">
+      <div id="market-network-plot" class="w-full h-[520px] rounded-xl overflow-hidden bg-slate-50 relative">
         <div class="flex items-center justify-center h-full text-slate-400 text-xs">
           <span class="animate-spin mr-2">⚙️</span> Simulating force-directed network layout...
         </div>
@@ -110,18 +200,18 @@
         <div class="flex items-center gap-4 flex-wrap">
           <div class="flex items-center gap-1.5">
             <span class="w-3 h-3 rounded-full bg-indigo-600 inline-block"></span>
-            <span>Node Size = Connections (Degree)</span>
+            <span>Node Size = Number of Connections</span>
           </div>
           <div class="flex items-center gap-1.5">
-            <span class="w-4 h-0.5 bg-slate-400 inline-block"></span>
-            <span>Edge = Pairwise |r| ≥ Threshold</span>
+            <span class="w-4 h-0.5 bg-indigo-600 inline-block"></span>
+            <span>Line = Correlation |r| ≥ Threshold</span>
           </div>
           <div class="flex items-center gap-1.5">
             <span class="w-3 h-3 rounded-full border-2 border-amber-400 bg-indigo-600 inline-block"></span>
             <span>Selected Stock Focus</span>
           </div>
         </div>
-        <span class="text-[10px] text-slate-400 font-medium">Click any node to isolate connections</span>
+        <span class="text-[10px] text-slate-400 font-medium">Click node to isolate co-moving partners</span>
       </div>
     </div>
 
@@ -130,22 +220,11 @@
       <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
         <div>
           <h3 class="text-sm font-bold text-slate-900">Correlation Matrix</h3>
-          <p class="text-xs text-slate-500 mt-0.5">Diverging scale from -1.0 (Blue) to +1.0 (Red)</p>
+          <p class="text-xs text-slate-500 mt-0.5">Fixed scale: -1.0 (Blue) to 0.0 (Neutral) to +1.0 (Red)</p>
         </div>
-        
-        <!-- Subset Filter Selector -->
-        <select id="heatmap-subset-select" onchange="TradeSenseMarketRel.setSubset(this.value)" class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white font-medium text-slate-700">
-          <option value="all">All Eligible Stocks</option>
-          <option value="top20">Top 20 Most Connected</option>
-        </select>
-      </div>
-
-      <!-- Quick Search Bar -->
-      <div class="relative">
-        <input type="text" id="heatmap-search" placeholder="Filter stocks by ticker (e.g. TCS, RELIANCE)..."
-               oninput="TradeSenseMarketRel.setSearchQuery(this.value)"
-               class="w-full text-xs px-3 py-1.5 pl-8 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
-        <span class="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
+        <span id="matrix-size-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-700">
+          10 × 10 Matrix
+        </span>
       </div>
 
       <!-- Heatmap Plot Container -->
@@ -165,7 +244,7 @@
           </div>
         </div>
         <p id="pair-desc" class="text-[11px] text-slate-600 leading-relaxed">
-          Click any matrix cell to inspect pair correlation and edge qualification.
+          Click any cell in the matrix to inspect correlation and network qualification.
         </p>
       </div>
     </div>
@@ -174,124 +253,61 @@
 
   <!-- ── Interactive Stock Inspector Panel (Populated on Node/Cell Click) ── -->
   <div id="stock-inspector-panel">
-    <!-- Populated dynamically by TradeSenseMarketRel.updateStockInspector -->
     <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs text-center text-slate-400 text-xs">
       💡 Tip: Click any stock node in the network or cell in the heatmap to isolate its co-moving partners and diversifiers.
     </div>
   </div>
 
-  <!-- ── Phase 6: Compact Network Insights ──────────────────────────────── -->
+  <!-- ── Plain-Language Network Insights (Phase 8: No Raw Formulas) ──────── -->
   <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
       <div>
-        <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Network Insights</h4>
-        <p class="text-xs text-slate-500 mt-0.5">Empirical graph properties computed across active observation window</p>
+        <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Understanding Market Connections</h4>
+        <p class="text-xs text-slate-500 mt-0.5">How stock relationships impact portfolio risk and diversification</p>
       </div>
       <span class="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
-        Graph G = (V, E)
+        Portfolio Insights
       </span>
     </div>
 
-    <!-- 5-Metric Compact Grid -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
-      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-        <span class="text-[10px] uppercase font-bold text-slate-400 block">Eligible Stocks (V)</span>
-        <strong id="insight-val-stocks" class="text-base text-slate-900 font-mono mt-0.5 block">93</strong>
-      </div>
-      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-        <span class="text-[10px] uppercase font-bold text-slate-400 block">Active Connections (E)</span>
-        <strong id="insight-val-edges" class="text-base text-indigo-600 font-mono mt-0.5 block">0</strong>
-      </div>
-      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-        <span class="text-[10px] uppercase font-bold text-slate-400 block">Network Density</span>
-        <strong id="insight-val-density" class="text-base text-purple-600 font-mono mt-0.5 block">0.0%</strong>
-      </div>
-      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-        <span class="text-[10px] uppercase font-bold text-slate-400 block">Most Connected Stock</span>
-        <strong id="insight-val-hub" class="text-base text-slate-900 font-mono mt-0.5 block truncate">—</strong>
-      </div>
-      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-        <span class="text-[10px] uppercase font-bold text-slate-400 block">Connected Components</span>
-        <strong id="insight-val-components" class="text-base text-emerald-600 font-mono mt-0.5 block">—</strong>
-      </div>
-    </div>
-
-    <!-- Clear Conceptual Distinctions -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 text-xs">
+    <!-- 3 Core Concepts in Plain Language -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
       <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
         <span class="font-bold text-slate-800 flex items-center gap-1.5">
-          <span>🔗</span> Connected Components
+          <span>🔗</span> Co-Moving Connections
         </span>
         <p class="text-[11px] text-slate-600 leading-relaxed">
-          Maximal subgraphs where every vertex can reach every other vertex via an active path of edges. Stocks within the same component share direct or transitive co-movement.
+          A connection line forms when two stocks exhibit strong historical price correlation. Holding multiple connected stocks increases concentration risk if that sector falls.
         </p>
       </div>
 
       <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
         <span class="font-bold text-slate-800 flex items-center gap-1.5">
-          <span>🛡️</span> Independent Sets
+          <span>🛡️</span> Independent Diversifiers
         </span>
         <p class="text-[11px] text-slate-600 leading-relaxed">
-          Sets of vertices containing <strong>zero pairwise edges</strong>. Stocks in an independent set do not meet the co-movement threshold with one another, providing diversification candidates.
+          Stocks with no connecting lines move independently during market swings. Combining unconnected stocks across different groups provides genuine portfolio protection.
         </p>
       </div>
 
       <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
         <span class="font-bold text-slate-800 flex items-center gap-1.5">
-          <span>🎨</span> Graph-Coloring Groups
+          <span>📊</span> Network Density
         </span>
         <p class="text-[11px] text-slate-600 leading-relaxed">
-          A partition of the entire graph into disjoint independent sets such that no two adjacent vertices share the same color. Optimal coloring partitions the universe into mutually diversified buckets.
+          Network density measures the proportion of possible stock connections that actually exist. Lower density indicates greater opportunities for risk reduction.
         </p>
       </div>
     </div>
 
-    <!-- Plain-Language Interpretation & Caution -->
+    <!-- Practical Analytical Takeaway -->
     <div class="p-4 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-900 space-y-1">
       <div class="font-bold flex items-center gap-1.5">
-        <span>⚠️</span> Analytical Note on Portfolio Diversification
+        <span>⚠️</span> Portfolio Construction Note
       </div>
       <p id="network-insight-explanation" class="text-[11px] text-amber-800 leading-relaxed">
-        A sparse correlation network indicates lower pairwise linear synchronization under the chosen threshold, but does not prove complete portfolio risk immunity. Unmodeled macroeconomic shocks or non-linear tail dependence can still affect stocks independently.
+        A sparse correlation network indicates lower mutual synchronization among selected stocks under the current threshold. To build a resilient portfolio, select stocks from different clusters or sectors.
       </p>
-    </div>
-  </div>
-
-  <!-- ── Phase 7: Technical View Math Panel (Hidden by default) ──────────── -->
-  <div id="technical-details-panel" class="hidden bg-slate-900 text-slate-200 rounded-2xl p-6 border border-slate-800 space-y-4">
-    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-      <h4 class="text-sm font-bold text-white uppercase tracking-wider">Technical & Mathematical Specifications</h4>
-      <span class="text-xs font-mono text-indigo-400 font-bold">Discrete Mathematics Specification</span>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono text-slate-300">
-      <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
-        <span class="text-indigo-400 font-bold">1. Edge Qualification Rule</span>
-        <p class="text-[11px] leading-relaxed">
-          (u, v) ∈ E ⟺ |r_uv| ≥ θ, where r_uv is the Pearson sample correlation between daily log return series of assets u and v over window T.
-        </p>
-      </div>
-
-      <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
-        <span class="text-indigo-400 font-bold">2. Graph Density Formula</span>
-        <p class="text-[11px] leading-relaxed">
-          Density D = (2 · |E|) / (|V| · (|V| - 1)). Bounded in [0, 1]. Measures percentage of all C(N, 2) possible market relationships currently realized.
-        </p>
-      </div>
-
-      <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
-        <span class="text-indigo-400 font-bold">3. Adjacency Representation</span>
-        <p class="text-[11px] leading-relaxed">
-          G is represented as an adjacency dictionary Adj[u] = {(v, w_uv) : v ∈ N(u)}. Degree d(u) = |Adj[u]| denotes total active connections.
-        </p>
-      </div>
-
-      <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
-        <span class="text-indigo-400 font-bold">4. Welsh-Powell Chromatic Number</span>
-        <p class="text-[11px] leading-relaxed">
-          Vertices sorted by descending degree d(v). Greedy sequential assignment gives upper bound χ(G) ≤ Δ(G) + 1 on independent diversification groups.
-        </p>
-      </div>
     </div>
   </div>
 
