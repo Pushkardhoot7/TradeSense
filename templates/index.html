@@ -78,6 +78,7 @@
 
   <!-- Interactive Control Strip (Filter / Threshold / Run) -->
   <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
+
     <div class="flex items-center gap-3 flex-wrap flex-1 min-w-[280px]">
       <!-- Sector Filter (12 Sectors) -->
       <div class="flex items-center gap-2">
@@ -147,12 +148,18 @@
     </button>
   </div>
 
+  <!-- Analysis Running Banner (shown while runAnalysis() is in flight) -->
+  <div id="analysis-running-banner" style="display:none;" class="bg-indigo-600 text-white text-xs font-bold text-center py-2 px-4 rounded-xl shadow-md animate-pulse">
+    ⚡ Running analysis…
+  </div>
+
   <!-- Live Indian Market Indices Bar -->
   <div class="bg-gradient-to-r from-slate-900 to-indigo-950 rounded-2xl p-4 border border-slate-800 text-white shadow-md">
     <div class="flex items-center justify-between mb-2.5">
       <div class="flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         <span class="text-xs font-black uppercase tracking-wider text-slate-300">Indian Market Indices (NSE / BSE Benchmark)</span>
+
       </div>
       <span id="indices-timestamp" class="text-[11px] text-slate-400 font-mono">Syncing...</span>
     </div>
@@ -424,12 +431,25 @@ function getScoreRating(score) {
 async function loadDashboard() {
   try {
     const threshold = parseFloat(document.getElementById('ctrl-threshold')?.value || 0.70);
+    // Read the currently-selected sector so we pass it to sector-aware endpoints
+    const sector = document.getElementById('ctrl-sector')?.value || 'All Sectors';
+    const sectorParam = (sector && sector !== 'All Sectors')
+      ? `?sector=${encodeURIComponent(sector)}`
+      : '';
+
+    // Show loading spinners on the main sections that are about to refresh
+    const networkChart = document.getElementById('dashboard-network-chart');
+    const heatmapChart = document.getElementById('dashboard-heatmap-chart');
+    if (networkChart) networkChart.innerHTML = '<div class="flex justify-center py-12 text-slate-400 text-xs">Loading network for ' + (sector === 'All Sectors' ? 'full market' : sector) + '...</div>';
+    if (heatmapChart) heatmapChart.innerHTML = '<div class="flex justify-center py-8 text-slate-400 text-xs">Loading matrix...</div>';
+
     const [overview, corr, portfolios, news, stocksRes, coloringRes, nondomRes, indicesRes, sectorsRes] = await Promise.all([
       TradeSense.apiCall('/api/market/overview'),
       TradeSense.apiCall('/api/correlation'),
       TradeSense.apiCall('/api/portfolios/top'),
       TradeSense.apiCall('/api/market/news').catch(() => null),
-      TradeSense.apiCall('/api/stocks/'),
+      // Pass sector to the stocks list so the table shows the correct filtered set
+      TradeSense.apiCall(`/api/stocks/${sectorParam}`),
       TradeSense.apiCall('/api/coloring'),
       TradeSense.apiCall('/api/relation'),
       TradeSense.apiCall('/api/market/indices').catch(() => null),
@@ -443,16 +463,20 @@ async function loadDashboard() {
 
     // Update KPIs
     if (overview) {
-      document.getElementById('kpi-stocks').textContent = overview.stocks_analyzed || (stocksRes?.stocks ? stocksRes.stocks.length : '—');
+      // Prefer the count from the sector-filtered stocks response so KPIs match table
+      const displayedStockCount = stocksRes?.stocks
+        ? stocksRes.stocks.filter(s => s.return_pct !== null).length || stocksRes.stocks.length
+        : overview.stocks_analyzed || '—';
+      document.getElementById('kpi-stocks').textContent = displayedStockCount;
       document.getElementById('kpi-edges').textContent = overview.strong_links ?? 0;
       document.getElementById('kpi-nondom').textContent = overview.non_dominated ?? 0;
       document.getElementById('kpi-colors').textContent = overview.color_groups ?? 0;
       document.getElementById('kpi-portfolios').textContent = overview.portfolios_evaluated ?? 0;
       document.getElementById('kpi-topdm').textContent = overview.top_dm_score ? overview.top_dm_score.toFixed(1) : '—';
-      
+
       const tableCount = document.getElementById('table-stock-count');
-      if (tableCount) tableCount.textContent = overview.stocks_analyzed || (stocksRes?.stocks ? stocksRes.stocks.length : '93');
-      
+      if (tableCount) tableCount.textContent = stocksRes?.stocks ? stocksRes.stocks.length : overview.stocks_analyzed || '93';
+
       // Update Data Quality Indicator
       if (overview.data_quality) {
         const dq = overview.data_quality;
@@ -487,11 +511,30 @@ async function loadDashboard() {
     const top3 = portfolios?.top_portfolios || [];
     renderDashboardTop3(top3);
 
-    // Network & Heatmap charts
+    // Network & Heatmap charts — filter by sector's tickers when not All Sectors
     if (corr) {
-      const graphRes = await TradeSense.apiCall(`/api/graph?threshold=${threshold}`);
+      // Build a sector-ticker subset param for the graph so it shows only sector stocks
+      const sectorTickers = stocksRes?.stocks
+        ? stocksRes.stocks.map(s => s.symbol).filter(Boolean).join(',')
+        : null;
+      let graphUrl = `/api/graph?threshold=${threshold}`;
+      if (sectorTickers && sector !== 'All Sectors') {
+        graphUrl += `&subset=${encodeURIComponent(sectorTickers)}`;
+      }
+      const graphRes = await TradeSense.apiCall(graphUrl);
       TradeSense.renderNetworkGraph('dashboard-network-chart', graphRes);
-      TradeSense.renderCorrelationHeatmap('dashboard-heatmap-chart', corr.matrix, corr.tickers);
+
+      // Correlation matrix: also filter to sector tickers for clarity
+      let corrMatrix = corr.matrix;
+      let corrTickers = corr.tickers;
+      if (sectorTickers && sector !== 'All Sectors') {
+        try {
+          const filteredCorr = await TradeSense.apiCall(`/api/correlation?subset=${encodeURIComponent(sectorTickers)}`);
+          corrMatrix = filteredCorr.matrix;
+          corrTickers = filteredCorr.tickers;
+        } catch(e) { /* fall back to full matrix */ }
+      }
+      TradeSense.renderCorrelationHeatmap('dashboard-heatmap-chart', corrMatrix, corrTickers);
     }
 
     // Sector Analysis Table
@@ -499,14 +542,14 @@ async function loadDashboard() {
       renderSectorAnalysisTable(sectorsRes.sectors, sectorsRes.insights);
     }
 
-    // Stocks Universe Table
+    // Stocks Universe Table — stocksRes is already sector-filtered
     renderStocksTable(stocksRes?.stocks || stocksRes || [], coloringRes?.coloring_dict || {}, nondomRes?.non_dominated || []);
 
     // News Pulse
     renderNewsPulse(news);
 
   } catch(e) {
-    console.error("Dashboard load error:", e);
+    console.error('Dashboard load error:', e);
   }
 }
 
@@ -841,9 +884,18 @@ function renderNewsPulse(news) {
 async function runAnalysis() {
   const btn = document.getElementById('analyze-btn');
   const spinner = btn ? btn.querySelector('.btn-spinner') : null;
-  if (spinner) spinner.classList.add('animate-spin');
+  if (btn) btn.disabled = true;
+  if (spinner) { spinner.textContent = '⏳'; spinner.classList.add('animate-spin'); }
+
+  // Show a top-level loading banner so the user knows something is happening
+  const sector = document.getElementById('ctrl-sector')?.value || 'All Sectors';
+  const banner = document.getElementById('analysis-running-banner');
+  if (banner) {
+    banner.textContent = `⚡ Running analysis for: ${sector}…`;
+    banner.style.display = 'block';
+  }
+
   try {
-    const sector = document.getElementById('ctrl-sector')?.value || 'All Sectors';
     const period = document.getElementById('ctrl-period')?.value || '1y';
     const corr_threshold = parseFloat(document.getElementById('ctrl-threshold')?.value || 0.70);
     const portfolio_k = parseInt(document.getElementById('ctrl-k')?.value || 3);
@@ -858,9 +910,13 @@ async function runAnalysis() {
     });
     await loadDashboard();
   } catch(e) {
-    console.error("Analysis trigger error:", e);
+    console.error('Analysis trigger error:', e);
+    const stocksTbody = document.getElementById('dashboard-stocks-tbody');
+    if (stocksTbody) stocksTbody.innerHTML = '<tr><td colspan="10" class="py-6 text-center text-rose-500 font-sans">Analysis failed — please try again or switch to Demo Simulation mode.</td></tr>';
   } finally {
-    if (spinner) spinner.classList.remove('animate-spin');
+    if (btn) btn.disabled = false;
+    if (spinner) { spinner.textContent = '⚡'; spinner.classList.remove('animate-spin'); }
+    if (banner) banner.style.display = 'none';
   }
 }
 
