@@ -282,11 +282,12 @@ function renderTop3Cards(top3) {
     const constituents = Array.isArray(p.portfolio) ? p.portfolio : [];
 
     const pillars = [
-      ['Return (30%)', p.return_score, '#4f46e5'],
-      ['Risk Efficiency (25%)', p.risk_score, '#7c3aed'],
-      ['Diversification (20%)', p.diversification_score, '#059669'],
-      ['Stability (15%)', p.stability_score ?? p.dominance_score, '#d97706'],
-      ['Network Benefit (10%)', p.network_score ?? p.group_score, '#0284c7']
+      ['Expected Return (25%)', p.return_score, '#4f46e5'],
+      ['Risk Efficiency (20%)', p.risk_score, '#7c3aed'],
+      ['Diversification (25%)', p.diversification_score, '#059669'],
+      ['Return Stability (12%)', p.stability_score ?? p.dominance_score, '#d97706'],
+      ['Network Benefit (10%)', p.network_score ?? p.group_score, '#0284c7'],
+      ['Sector Diversity (8%)', p.sector_score, '#e11d48']
     ];
 
     return `
@@ -327,11 +328,11 @@ function renderTop3Cards(top3) {
           </div>
         </div>
 
-        <!-- 5-Pillar Score Bars -->
+        <!-- 6-Pillar Score Bars -->
         <div class="space-y-1.5 pt-2 border-t border-slate-100">
           ${pillars.map(([label, val, col]) => `
             <div class="flex items-center gap-2 text-[10px]">
-              <span class="text-slate-600 font-medium w-32 truncate">${label}</span>
+              <span class="text-slate-600 font-medium w-36 truncate">${label}</span>
               <div class="score-bar flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
                 <div class="score-bar-fill h-full rounded-full" style="width: ${Math.min(100, Math.max(0, val || 0)).toFixed(1)}%; background-color: ${col}"></div>
               </div>
@@ -352,11 +353,12 @@ function renderScoreBarsComparison(top3) {
   const p2 = top3.length > 1 ? top3[1] : top3[0];
 
   const pillars = [
-    { label: 'Return (30%)', k1: p1.return_score, k2: p2.return_score, col: '#4f46e5' },
-    { label: 'Risk Efficiency (25%)', k1: p1.risk_score, k2: p2.risk_score, col: '#7c3aed' },
-    { label: 'Diversification (20%)', k1: p1.diversification_score, k2: p2.diversification_score, col: '#059669' },
-    { label: 'Stability (15%)', k1: p1.stability_score ?? p1.dominance_score, k2: p2.stability_score ?? p2.dominance_score, col: '#d97706' },
-    { label: 'Network Benefit (10%)', k1: p1.network_score ?? p1.group_score, k2: p2.network_score ?? p2.group_score, col: '#0284c7' }
+    { label: 'Expected Return (25%)', k1: p1.return_score, k2: p2.return_score, col: '#4f46e5' },
+    { label: 'Risk Efficiency (20%)', k1: p1.risk_score, k2: p2.risk_score, col: '#7c3aed' },
+    { label: 'Diversification (25%)', k1: p1.diversification_score, k2: p2.diversification_score, col: '#059669' },
+    { label: 'Return Stability (12%)', k1: p1.stability_score ?? p1.dominance_score, k2: p2.stability_score ?? p2.dominance_score, col: '#d97706' },
+    { label: 'Network Benefit (10%)', k1: p1.network_score ?? p1.group_score, k2: p2.network_score ?? p2.group_score, col: '#0284c7' },
+    { label: 'Sector Diversity (8%)', k1: p1.sector_score, k2: p2.sector_score, col: '#e11d48' }
   ];
 
   container.innerHTML = `
@@ -386,7 +388,7 @@ function renderScoreBarsComparison(top3) {
 
   const reasonEl = document.getElementById('score-reason-text');
   if (reasonEl) {
-    reasonEl.innerHTML = `Rank #1 scored <strong>${p1.dm_score.toFixed(1)}/100</strong> by pairing an expected return of <strong>+${(p1.raw_return||0).toFixed(1)}%</strong> with tight risk control (<strong>${(p1.raw_risk||0).toFixed(1)}% volatility</strong>) and a low average correlation of <strong>${(p1.avg_correlation||0).toFixed(2)}</strong>, giving it a balanced score across all 5 normalized financial pillars.`;
+    reasonEl.innerHTML = `Rank #1 scored <strong>${p1.dm_score.toFixed(1)}/100</strong> by pairing an expected return of <strong>+${(p1.raw_return||0).toFixed(1)}%</strong> with tight risk control (<strong>${(p1.raw_risk||0).toFixed(1)}% volatility</strong>), sector dispersion across distinct industries, and low internal correlation (<strong>${(p1.avg_correlation||0).toFixed(2)}</strong>), giving it a balanced score across all 6 normalized financial and discrete math pillars.`;
   }
 }
 

@@ -166,6 +166,43 @@
 
   <!-- Main Content Area -->
   <main class="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
+    <!-- Guided Workflow Step Navigation -->
+    <div class="mb-5 overflow-x-auto pb-1 scrollbar-thin">
+      <div class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 whitespace-nowrap bg-white/80 backdrop-blur px-3 py-2 rounded-xl border border-slate-200/80 shadow-2xs">
+        <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold mr-1">Workflow:</span>
+        <a href="/live-market" class="px-2 py-0.5 rounded hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-1 {% if request.url.path == '/live-market' %}bg-indigo-50 text-indigo-700 font-bold ring-1 ring-indigo-200{% endif %}">
+          <span>1. DATA</span>
+        </a>
+        <span class="text-slate-300">→</span>
+        <a href="/relationships" class="px-2 py-0.5 rounded hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-1 {% if request.url.path == '/relationships' %}bg-indigo-50 text-indigo-700 font-bold ring-1 ring-indigo-200{% endif %}">
+          <span>2. RELATIONSHIPS</span>
+        </a>
+        <span class="text-slate-300">→</span>
+        <a href="/market-network" class="px-2 py-0.5 rounded hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-1 {% if request.url.path == '/market-network' %}bg-indigo-50 text-indigo-700 font-bold ring-1 ring-indigo-200{% endif %}">
+          <span>3. MARKET NETWORK</span>
+        </a>
+        <span class="text-slate-300">→</span>
+        <a href="/stock-groups" class="px-2 py-0.5 rounded hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-1 {% if request.url.path == '/stock-groups' %}bg-indigo-50 text-indigo-700 font-bold ring-1 ring-indigo-200{% endif %}">
+          <span>4. STOCK GROUPS</span>
+        </a>
+        <span class="text-slate-300">→</span>
+        <a href="/hasse-ranking" class="px-2 py-0.5 rounded hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-1 {% if request.url.path == '/hasse-ranking' %}bg-indigo-50 text-indigo-700 font-bold ring-1 ring-indigo-200{% endif %}">
+          <span>5. STOCK RANKING</span>
+        </a>
+        <span class="text-slate-300">→</span>
+        <a href="/portfolio-lab" class="px-2 py-0.5 rounded hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-1 {% if request.url.path == '/portfolio-lab' %}bg-indigo-50 text-indigo-700 font-bold ring-1 ring-indigo-200{% endif %}">
+          <span>6. PORTFOLIO</span>
+        </a>
+        <span class="text-slate-300">→</span>
+        <a href="/backtesting" class="px-2 py-0.5 rounded hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-1 {% if request.url.path == '/backtesting' %}bg-indigo-50 text-indigo-700 font-bold ring-1 ring-indigo-200{% endif %}">
+          <span>7. BACKTESTING</span>
+        </a>
+        <span class="text-slate-300">→</span>
+        <a href="/reports" class="px-2 py-0.5 rounded hover:bg-slate-100 hover:text-indigo-600 transition-colors flex items-center gap-1 {% if request.url.path == '/reports' %}bg-indigo-50 text-indigo-700 font-bold ring-1 ring-indigo-200{% endif %}">
+          <span>8. REPORT</span>
+        </a>
+      </div>
+    </div>
     {% block content %}{% endblock %}
   </main>
 

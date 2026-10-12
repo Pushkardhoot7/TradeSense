@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import csv
 import logging
+import threading
 import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -22,6 +23,7 @@ import pandas as pd
 from backend.schemas import AnalyzeRequest
 
 logger = logging.getLogger(__name__)
+_pipeline_lock = threading.Lock()
 
 PROJECT_ROOT  = Path(__file__).parent.parent
 UNIVERSE_CSV  = PROJECT_ROOT / "data" / "stock_universe.csv"
@@ -99,7 +101,7 @@ def _compute_data_quality(valid_count: int, total_count: int,
 
 def _compute_sector_analysis(metrics_list: list[dict], corr_df: pd.DataFrame,
                              adj: dict, threshold: float) -> list[dict]:
-    """Compute per-sector analytics from the analyzed stock metrics."""
+    """Compute per-sector analytics from the analyzed stock metrics with leading stock identification."""
     sector_stocks: dict[str, list[dict]] = defaultdict(list)
     for m in metrics_list:
         sec = m.get("sector", "Unknown")
@@ -135,11 +137,18 @@ def _compute_sector_analysis(metrics_list: list[dict], corr_df: pd.DataFrame,
         avg_risk = sum(risks) / len(risks) if risks else 0
         avg_corr = sum(corr_vals) / len(corr_vals) if corr_vals else 0
 
-        # Simple sector score (diversification-aware)
+        # Diversification-aware sector score
         ret_component = min(avg_ret / 50 * 100, 100) if avg_ret > 0 else 0
         risk_component = max(0, 100 - avg_risk * 2) if avg_risk > 0 else 50
         div_component = max(0, 100 * (1 - avg_corr)) if avg_corr >= 0 else 50
         sector_score = round(0.4 * ret_component + 0.3 * risk_component + 0.3 * div_component, 1)
+
+        # Identify leading asset in sector
+        best_stock = sorted(stocks, key=lambda s: (s.get("sharpe") or 0, s.get("return_pct") or 0), reverse=True)[0] if stocks else {}
+        leading_sym = best_stock.get("symbol", syms[0] if syms else "—")
+        leading_name = best_stock.get("company_name", leading_sym)
+        leading_ret = best_stock.get("return_pct", 0.0)
+        leading_sharpe = best_stock.get("sharpe", 0.0)
 
         sector_results.append({
             "sector": sector_name,
@@ -151,9 +160,42 @@ def _compute_sector_analysis(metrics_list: list[dict], corr_df: pd.DataFrame,
             "sector_edges": sector_edges,
             "model_score": max(0, min(100, sector_score)),
             "stock_symbols": syms,
+            "leading_stock": leading_sym,
+            "leading_stock_name": leading_name,
+            "leading_return": round(leading_ret, 2) if leading_ret is not None else 0.0,
+            "leading_sharpe": round(leading_sharpe, 2) if leading_sharpe is not None else 0.0,
         })
 
     return sector_results
+
+
+def _generate_sector_insights(sector_results: list[dict]) -> list[str]:
+    """Generate plain-English analytical insights across market segments."""
+    if not sector_results:
+        return []
+    insights = []
+    # Highest model score
+    by_score = sorted(sector_results, key=lambda s: s.get("model_score", 0), reverse=True)
+    if by_score:
+        top_sec = by_score[0]
+        insights.append(
+            f"Top Ranked Segment: {top_sec['sector']} achieves the highest model score ({top_sec['model_score']}/100) with avg return {top_sec['avg_return']}% and risk {top_sec['avg_risk']}%, led by {top_sec.get('leading_stock', 'leaders')}."
+        )
+    # Highest return
+    by_ret = sorted(sector_results, key=lambda s: s.get("avg_return", 0), reverse=True)
+    if by_ret and by_ret[0] != by_score[0]:
+        top_ret = by_ret[0]
+        insights.append(
+            f"Highest Return Segment: {top_ret['sector']} leads in capital growth at +{top_ret['avg_return']}% annual return, spearheaded by {top_ret.get('leading_stock', 'key assets')}."
+        )
+    # Lowest correlation (best diversification)
+    by_corr = sorted(sector_results, key=lambda s: s.get("avg_correlation", 1))
+    if by_corr:
+        low_corr = by_corr[0]
+        insights.append(
+            f"Best Diversifier: {low_corr['sector']} exhibits low internal correlation (r = {low_corr['avg_correlation']:.2f}), making it a prime candidate for portfolio risk reduction."
+        )
+    return insights
 
 
 def _generate_network_conclusion(stats: dict, strong_rels: list, components: list,
@@ -206,6 +248,10 @@ class AnalysisPipeline:
         self.analysis_id = str(uuid.uuid4())
 
     def run(self) -> dict[str, Any]:
+        with _pipeline_lock:
+            return self._run_internal()
+
+    def _run_internal(self) -> dict[str, Any]:
         cfg    = self.config
         result: dict[str, Any] = {
             "analysis_id":   self.analysis_id,
@@ -234,8 +280,13 @@ class AnalysisPipeline:
 
         # ── Stage 2: Stock universe ────────────────────────────────────────
         universe: list[dict] = []
+        full_universe: list[dict] = []
         try:
-            universe = _load_universe(cfg.sector)
+            full_universe = _load_universe("All Sectors")
+            if cfg.sector == "All Sectors":
+                universe = full_universe
+            else:
+                universe = [r for r in full_universe if r.get("sector") == cfg.sector]
         except Exception as exc:
             logger.error("[Stage 2] Universe load failed: %s", exc)
 
@@ -244,14 +295,20 @@ class AnalysisPipeline:
         result["all_sectors"] = all_sectors
         result["sector_count"] = len(all_sectors)
 
-        # In demo mode, use demo provider's built-in symbol list
+        symbol_meta: dict[str, dict] = {r["symbol"]: r for r in full_universe}
+
+        # In demo mode, respect sector selection
         if cfg.data_mode == "DEMO" and provider:
-            symbols = provider.supported_tickers
+            if cfg.sector == "All Sectors":
+                symbols = list(provider.supported_tickers)
+            else:
+                symbols = [s for s in provider.supported_tickers if symbol_meta.get(s, {}).get("sector") == cfg.sector]
+                if not symbols:
+                    symbols = [r["symbol"] for r in universe]
         else:
-            # NO CAP — use all stocks from the universe for the selected sector
+            # All stocks from the universe for the selected sector
             symbols = [r["symbol"] for r in universe]
 
-        symbol_meta: dict[str, dict] = {r["symbol"]: r for r in universe}
         result["tickers"] = symbols
         result["universe_total"] = len(symbols)
 
@@ -278,15 +335,105 @@ class AnalysisPipeline:
         result["failed_symbols"] = failed_symbols
         logger.info("[Stage 3] Price data: %d stocks (%d failed)", len(valid_symbols), len(failed_symbols))
 
-        # Check live data availability
+        # Check live data availability & market status
+        m_status = provider.get_market_status() if provider and hasattr(provider, "get_market_status") else "CLOSED"
+        if isinstance(m_status, dict):
+            is_open = m_status.get("is_open", False)
+            status_str = m_status.get("status", "CLOSED")
+        elif isinstance(m_status, str):
+            is_open = (m_status.upper() == "OPEN")
+            status_str = m_status.upper()
+        else:
+            is_open = False
+            status_str = "CLOSED"
+
         if not price_data:
             result["data_mode"] = "UNAVAILABLE"
-            result["provider_label"] = "Live data unavailable"
+            result["provider_label"] = "Data unavailable"
             result["live_available"] = False
+            result["market_status"] = "UNAVAILABLE"
+            result["is_market_open"] = False
+            pipeline_status = "PROVIDER_FAILURE"
+        elif cfg.data_mode == "DEMO":
+            result["data_mode"] = "DEMO"
+            result["provider_label"] = "⚠️ DEMO SIMULATION (SYNTHETIC)"
+            result["live_available"] = False
+            result["market_status"] = "DEMO"
+            result["is_market_open"] = False
+            result["session_note"] = "Deterministic simulated prices for demonstration"
+            pipeline_status = "SUCCESS" if len(failed_symbols) == 0 else "PARTIAL_SUCCESS"
         else:
-            result["data_mode"] = "LIVE"
-            result["provider_label"] = "● LIVE • NSE"
-            result["live_available"] = True
+            if is_open:
+                result["data_mode"] = "LIVE"
+                result["provider_label"] = "● LIVE • NSE (OPEN)"
+                result["live_available"] = True
+                result["market_status"] = "OPEN"
+                result["is_market_open"] = True
+                result["session_note"] = "Live intraday market quotes from NSE"
+            else:
+                result["data_mode"] = "HISTORICAL CLOSING"
+                result["provider_label"] = "● NSE CLOSED • CLOSING PRICES"
+                result["live_available"] = False
+                result["market_status"] = "CLOSED"
+                result["is_market_open"] = False
+                result["session_note"] = "NSE is closed. Analysis computed using official closing prices from latest session."
+
+            if len(valid_symbols) == 0:
+                pipeline_status = "PROVIDER_FAILURE"
+            elif len(failed_symbols) == 0:
+                pipeline_status = "SUCCESS"
+            elif len(valid_symbols) >= 5:
+                pipeline_status = "PARTIAL_SUCCESS"
+            else:
+                pipeline_status = "INSUFFICIENT_DATA"
+
+        # Build canonical Analysis Context (Phase 5)
+        exclusion_reasons: dict[str, str] = {}
+        last_errors = getattr(provider, "last_errors", {})
+        ticker_sources = getattr(provider, "ticker_sources", {})
+        for sym in failed_symbols:
+            if sym in last_errors:
+                err_obj = last_errors[sym]
+                msg = getattr(err_obj, "message", str(err_obj))
+                cat = getattr(err_obj, "category", "")
+                cat_val = getattr(cat, "value", str(cat)) if cat else "EXCLUDED"
+                exclusion_reasons[sym] = f"[{cat_val}] {msg}"
+            else:
+                exclusion_reasons[sym] = "No valid historical observations returned"
+
+        last_obs_date = ""
+        for df in price_data.values():
+            if df is not None and not df.empty and isinstance(df.index, pd.DatetimeIndex):
+                d_str = str(df.index[-1].date())
+                if not last_obs_date or d_str > last_obs_date:
+                    last_obs_date = d_str
+
+        analysis_ctx = {
+            "analysis_id": self.analysis_id,
+            "pipeline_status": pipeline_status,
+            "requested_count": len(symbols),
+            "validated_count": len(valid_symbols),
+            "excluded_count": len(failed_symbols),
+            "requested_universe": symbols,
+            "eligible_universe": valid_symbols,
+            "excluded_tickers": failed_symbols,
+            "exclusion_reasons": exclusion_reasons,
+            "data_provider": provider.data_mode_label if provider else "UNKNOWN",
+            "ticker_sources": ticker_sources,
+            "data_period": cfg.period,
+            "start_date": start_date,
+            "end_date": end_date,
+            "last_observation_date": last_obs_date,
+            "data_freshness": provider.get_last_updated() if provider else "",
+            "is_cache_hit": getattr(provider, "last_cache_hit", False),
+        }
+        result["analysis_context"] = analysis_ctx
+        result["pipeline_status"] = pipeline_status
+        result["requested_stocks"] = len(symbols)
+        result["validated_stocks"] = len(valid_symbols)
+        result["excluded_stocks"] = len(failed_symbols)
+        result["exclusion_reasons"] = exclusion_reasons
+        result["ticker_sources"] = ticker_sources
 
         # Data quality
         result["data_quality"] = _compute_data_quality(
@@ -554,14 +701,16 @@ class AnalysisPipeline:
             result.setdefault("all_portfolios", [])
             result.setdefault("top_dm_score", 0.0)
 
-        # ── Stage 16: Sector Analysis ─────────────────────────────────────
+        # ── Stage 16: Sector Analysis & Insights ─────────────────────────
         try:
             sector_analysis = _compute_sector_analysis(metrics_list, corr_df, adj, cfg.corr_threshold)
             result["sector_analysis"] = sector_analysis
+            result["sector_insights"] = _generate_sector_insights(sector_analysis)
             logger.info("[Stage 16] Sector analysis: %d sectors", len(sector_analysis))
         except Exception as exc:
             logger.error("[Stage 16] Sector analysis failed: %s", exc)
             result.setdefault("sector_analysis", [])
+            result.setdefault("sector_insights", [])
 
         logger.info("Pipeline complete [%s]: %d stocks, %d portfolios scored",
                     self.analysis_id, len(metrics_list), len(result.get("all_portfolios", [])))

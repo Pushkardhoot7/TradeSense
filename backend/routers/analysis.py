@@ -105,16 +105,35 @@ def get_data_quality():
         except Exception:
             res = AnalysisPipeline(AnalyzeRequest(data_mode="DEMO")).run()
             _last_result.update(res)
-    return _last_result.get("data_quality", {
-        "quality_score": 100.0,
-        "completeness_pct": 100.0,
-        "freshness": "Up to date",
-        "coverage_ratio": "100%",
-        "valid_stocks": _last_result.get("stocks_analyzed", 0),
-        "total_requested": _last_result.get("stocks_analyzed", 0),
-        "missing_stocks": [],
-        "status": "EXCELLENT"
+    ctx = _last_result.get("analysis_context", {})
+    dq = _last_result.get("data_quality", {}).copy() if isinstance(_last_result.get("data_quality"), dict) else {}
+    dq.update({
+        "requested_stocks": ctx.get("requested_count", len(_last_result.get("tickers", []))),
+        "valid_stocks": ctx.get("validated_count", len(_last_result.get("tickers", []))),
+        "excluded_stocks": ctx.get("excluded_count", 0),
+        "excluded_tickers": ctx.get("excluded_tickers", []),
+        "exclusion_reasons": ctx.get("exclusion_reasons", {}),
+        "data_provider": ctx.get("data_provider", _last_result.get("provider_label", "UNKNOWN")),
+        "data_freshness": ctx.get("data_freshness", _last_result.get("last_updated", "")),
+        "data_period": ctx.get("data_period", _last_result.get("period", "")),
+        "pipeline_status": ctx.get("pipeline_status", _last_result.get("pipeline_status", "SUCCESS")),
+        "analysis_id": ctx.get("analysis_id", _last_result.get("analysis_id", "")),
     })
+    return dq
+
+
+@router.get("/context")
+def get_analysis_context():
+    """Return canonical analysis context containing eligible and excluded universes."""
+    global _last_result
+    if not _last_result or "analysis_context" not in _last_result:
+        try:
+            res = AnalysisPipeline(AnalyzeRequest(data_mode="LIVE")).run()
+            _last_result.update(res)
+        except Exception:
+            res = AnalysisPipeline(AnalyzeRequest(data_mode="DEMO")).run()
+            _last_result.update(res)
+    return _last_result.get("analysis_context", {})
 
 
 @router.get("/correlation")
@@ -143,14 +162,37 @@ def correlation():
 
 @router.get("/graph")
 def graph(threshold: float = Query(default=0.70, ge=0.5, le=0.95)):
+    global _last_result
     if not _last_result:
-        result = AnalysisPipeline(AnalyzeRequest()).run()
-        _last_result.update(result)
+        try:
+            result = AnalysisPipeline(AnalyzeRequest(data_mode="LIVE")).run()
+            _last_result.update(result)
+        except Exception:
+            result = AnalysisPipeline(AnalyzeRequest(data_mode="DEMO")).run()
+            _last_result.update(result)
+
     # Re-build graph at requested threshold using existing correlation matrix
     corr = _last_result.get("correlation_matrix_df")
     tickers = _last_result.get("tickers", [])
-    if corr is None:
+
+    if corr is None or (isinstance(corr, pd.DataFrame) and corr.empty):
+        raw_mat = _last_result.get("correlation_matrix")
+        if raw_mat and isinstance(raw_mat, dict):
+            corr = pd.DataFrame(raw_mat)
+            _last_result["correlation_matrix_df"] = corr
+
+    if corr is None or (isinstance(corr, pd.DataFrame) and corr.empty):
+        try:
+            result = AnalysisPipeline(AnalyzeRequest(data_mode="DEMO")).run()
+            _last_result.update(result)
+            corr = _last_result.get("correlation_matrix_df")
+            tickers = _last_result.get("tickers", [])
+        except Exception:
+            return {"error": "No analysis data available. Run /api/analyze first."}
+
+    if corr is None or (isinstance(corr, pd.DataFrame) and corr.empty):
         return {"error": "No analysis data available. Run /api/analyze first."}
+
     from backend.core.graph import build_adjacency_dict, calculate_graph_statistics, bfs, dfs, connected_components_from_scratch
     adj = build_adjacency_dict(tickers, corr, threshold)
     stats = calculate_graph_statistics(adj, tickers)
@@ -158,9 +200,9 @@ def graph(threshold: float = Query(default=0.70, ge=0.5, le=0.95)):
     bfs_order, bfs_trace = bfs(adj, most_connected) if most_connected else ([], [])
     dfs_order, dfs_trace = dfs(adj, most_connected) if most_connected else ([], [])
     components = connected_components_from_scratch(adj)
-    edges = [{"source": src, "target": tgt, "weight": round(w, 4)}
+    edges = [{"source": src, "target": tgt, "weight": round(float(w), 4)}
              for src, neighbors in adj.items() for tgt, w in neighbors if src < tgt]
-    coloring_dict = _last_result.get("coloring", {}).get("coloring_dict", {})
+    coloring_dict = _last_result.get("coloring_dict") or _last_result.get("coloring", {}).get("coloring_dict", {})
     return {"threshold": threshold, "stats": stats, "edges": edges, "tickers": tickers,
             "coloring_dict": coloring_dict,
             "bfs": {"start": most_connected, "order": bfs_order, "trace": bfs_trace},

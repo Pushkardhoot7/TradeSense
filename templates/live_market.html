@@ -11,8 +11,8 @@
   <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
     <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
       <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Universe</div>
-      <div id="stat-stocks" class="text-2xl font-black text-slate-800 mt-1">12</div>
-      <div class="text-[11px] text-slate-500 mt-0.5">NSE Large Cap</div>
+      <div id="stat-stocks" class="text-2xl font-black text-slate-800 mt-1">93</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">NSE Equities</div>
     </div>
     <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
       <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Data Freshness</div>
@@ -80,7 +80,7 @@
         <p class="text-xs text-slate-500 mt-0.5">Click any asset row to launch full 360° Stock Explorer</p>
       </div>
       <span id="display-count" class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">
-        12 Assets
+        93 Assets
       </span>
     </div>
 
@@ -265,15 +265,24 @@ async function triggerAnalysis() {
   TradeSense.showLoading('stocks-table-body');
   try {
     await TradeSense.apiCall('/api/analyze', 'POST', {
-      data_mode: 'DEMO',
+      data_mode: 'LIVE',
       sector: 'All Sectors',
       corr_threshold: 0.70,
       portfolio_k: 3
     });
     await loadMarketData();
   } catch(e) {
-    alert("Analysis run completed.");
-    loadMarketData();
+    try {
+      await TradeSense.apiCall('/api/analyze', 'POST', {
+        data_mode: 'DEMO',
+        sector: 'All Sectors',
+        corr_threshold: 0.70,
+        portfolio_k: 3
+      });
+      await loadMarketData();
+    } catch(err) {
+      console.error("Analysis failed:", err);
+    }
   }
 }
 

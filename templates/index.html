@@ -31,6 +31,51 @@
     </div>
   </div>
 
+  <!-- 30-Second First-Time User Guide -->
+  <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 sm:p-5 text-indigo-950 space-y-3 shadow-2xs">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-base">🚀</span>
+        <h3 class="text-sm font-bold tracking-tight">Understanding TradeSense in 30 Seconds</h3>
+      </div>
+      <span class="text-[10px] font-bold uppercase tracking-wider bg-indigo-200/60 text-indigo-800 px-2 py-0.5 rounded-full">Beginner Guide</span>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+      <div class="bg-white/80 p-3 rounded-xl border border-indigo-100/80 space-y-1">
+        <div class="font-bold text-indigo-900 flex items-center gap-1.5">
+          <span class="text-indigo-600">1.</span> Data & Relationships
+        </div>
+        <p class="text-slate-600 text-[11px] leading-relaxed">
+          We collect daily price returns and measure Pearson correlation (r from -1.0 to +1.0) to see which stocks swing together.
+        </p>
+      </div>
+      <div class="bg-white/80 p-3 rounded-xl border border-indigo-100/80 space-y-1">
+        <div class="font-bold text-indigo-900 flex items-center gap-1.5">
+          <span class="text-indigo-600">2.</span> Network & Coloring
+        </div>
+        <p class="text-slate-600 text-[11px] leading-relaxed">
+          Stocks moving together are connected by lines. Graph coloring separates them so stocks of the same color never move together.
+        </p>
+      </div>
+      <div class="bg-white/80 p-3 rounded-xl border border-indigo-100/80 space-y-1">
+        <div class="font-bold text-indigo-900 flex items-center gap-1.5">
+          <span class="text-indigo-600">3.</span> Pareto Dominance
+        </div>
+        <p class="text-slate-600 text-[11px] leading-relaxed">
+          The Hasse diagram filters out dominated stocks (those with lower return and higher risk than others) without arbitrary thresholds.
+        </p>
+      </div>
+      <div class="bg-white/80 p-3 rounded-xl border border-indigo-100/80 space-y-1">
+        <div class="font-bold text-indigo-900 flex items-center gap-1.5">
+          <span class="text-indigo-600">4.</span> Portfolio & Backtesting
+        </div>
+        <p class="text-slate-600 text-[11px] leading-relaxed">
+          Combinatorial C(n,k) evaluates candidate baskets. The DM Score ranks them, and backtesting verifies historical resilience.
+        </p>
+      </div>
+    </div>
+  </div>
+
   <!-- Interactive Control Strip (Filter / Threshold / Run) -->
   <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
     <div class="flex items-center gap-3 flex-wrap flex-1 min-w-[280px]">
@@ -188,8 +233,8 @@
     <div class="p-4 rounded-xl bg-indigo-50/60 border border-indigo-100 space-y-1">
       <div class="text-[11px] font-bold text-indigo-900 uppercase tracking-wide">💡 What Does This Portfolio Score Mean?</div>
       <p class="text-xs text-indigo-800/90 leading-relaxed">
-        Each portfolio candidate is scored on a normalized scale from <strong>0 to 100</strong> across 5 core pillars:
-        <strong>Expected Return (30%)</strong>, <strong>Risk Efficiency (25%)</strong>, <strong>Diversification (20%)</strong>, <strong>Return Stability (15%)</strong>, and <strong>Network Independence (10%)</strong>.
+        Each portfolio candidate is scored on a normalized scale from <strong>0 to 100</strong> across 6 core discrete math & financial pillars (weights sum to 100%):
+        <strong>Expected Return (25%)</strong>, <strong>Risk Efficiency (20%)</strong>, <strong>Diversification (25%)</strong>, <strong>Return Stability (12%)</strong>, <strong>Network Independence (10%)</strong>, and <strong>Sector Diversity (8%)</strong>.
         A score above 75 represents a highly balanced portfolio where constituents minimize overlapping correlation while maintaining healthy growth potential.
       </p>
     </div>
@@ -306,7 +351,7 @@
     <div class="flex items-center justify-between flex-wrap gap-2">
       <div>
         <h3 class="text-sm font-bold text-slate-900">
-          Analyzed Stock Universe (<span id="table-stock-count">103</span> Stocks)
+          Analyzed Stock Universe (<span id="table-stock-count">93</span> Stocks)
         </h3>
         <p class="text-xs text-slate-500">Return, annualized volatility, Sharpe ratio, and discrete math properties</p>
       </div>
@@ -406,14 +451,18 @@ async function loadDashboard() {
       document.getElementById('kpi-topdm').textContent = overview.top_dm_score ? overview.top_dm_score.toFixed(1) : '—';
       
       const tableCount = document.getElementById('table-stock-count');
-      if (tableCount) tableCount.textContent = overview.stocks_analyzed || (stocksRes?.stocks ? stocksRes.stocks.length : '103');
+      if (tableCount) tableCount.textContent = overview.stocks_analyzed || (stocksRes?.stocks ? stocksRes.stocks.length : '93');
       
       // Update Data Quality Indicator
       if (overview.data_quality) {
         const dq = overview.data_quality;
-        document.getElementById('dq-status').textContent = `${dq.status || 'VERIFIED'} · ${dq.freshness || 'Up to date'} across ${dq.valid_stocks || overview.stocks_analyzed} stocks`;
-        document.getElementById('dq-coverage').textContent = dq.coverage_ratio || `${dq.completeness_pct || 100}%`;
-        document.getElementById('dq-score').textContent = `${Math.round(dq.quality_score || 100)}/100`;
+        const reqCount = overview.requested_stocks || dq.total_stocks || 93;
+        const valCount = overview.validated_stocks || dq.valid_stocks || overview.stocks_analyzed;
+        const excCount = overview.excluded_stocks !== undefined ? overview.excluded_stocks : Math.max(0, reqCount - valCount);
+        const prov = overview.data_provider || dq.data_provider || overview.provider_label || 'NSE';
+        document.getElementById('dq-status').textContent = `Requested: ${reqCount} · Validated: ${valCount} · Excluded: ${excCount} · Source: ${prov}`;
+        document.getElementById('dq-coverage').textContent = `${dq.coverage_pct || dq.score || 100}%`;
+        document.getElementById('dq-score').textContent = `${Math.round(dq.score || dq.quality_score || 100)}/100`;
       }
 
       // Update Central Hub
@@ -524,6 +573,7 @@ function renderDashboardTop3(top3) {
     const divScore = p.diversification_score ?? 78;
     const stabScore = p.stability_score ?? 72;
     const netScore = p.network_score ?? p.group_score ?? 75;
+    const secScore = p.sector_score ?? 75;
     const finalScore = p.dm_score || 0;
     const rating = getScoreRating(finalScore);
 
@@ -563,10 +613,10 @@ function renderDashboardTop3(top3) {
             </div>
           </div>
 
-          <!-- 5-Pillar Score Breakdown Bars -->
+          <!-- 6-Pillar Score Breakdown Bars -->
           <div class="space-y-1.5 pt-2 border-t border-slate-100 text-[10px] font-sans">
             <div class="flex items-center justify-between text-slate-500">
-              <span>Expected Return (30%)</span>
+              <span>Expected Return (25%)</span>
               <span class="font-mono font-bold text-slate-700">${retScore.toFixed(0)}/100</span>
             </div>
             <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
@@ -574,7 +624,7 @@ function renderDashboardTop3(top3) {
             </div>
 
             <div class="flex items-center justify-between text-slate-500">
-              <span>Risk Efficiency (25%)</span>
+              <span>Risk Efficiency (20%)</span>
               <span class="font-mono font-bold text-slate-700">${riskScore.toFixed(0)}/100</span>
             </div>
             <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
@@ -582,7 +632,7 @@ function renderDashboardTop3(top3) {
             </div>
 
             <div class="flex items-center justify-between text-slate-500">
-              <span>Diversification (20%)</span>
+              <span>Diversification (25%)</span>
               <span class="font-mono font-bold text-slate-700">${divScore.toFixed(0)}/100</span>
             </div>
             <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
@@ -590,7 +640,7 @@ function renderDashboardTop3(top3) {
             </div>
 
             <div class="flex items-center justify-between text-slate-500">
-              <span>Return Stability (15%)</span>
+              <span>Return Stability (12%)</span>
               <span class="font-mono font-bold text-slate-700">${stabScore.toFixed(0)}/100</span>
             </div>
             <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
@@ -603,6 +653,14 @@ function renderDashboardTop3(top3) {
             </div>
             <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
               <div class="bg-cyan-500 h-full rounded-full" style="width: ${netScore}%"></div>
+            </div>
+
+            <div class="flex items-center justify-between text-slate-500">
+              <span>Sector Diversity (8%)</span>
+              <span class="font-mono font-bold text-slate-700">${secScore.toFixed(0)}/100</span>
+            </div>
+            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+              <div class="bg-rose-500 h-full rounded-full" style="width: ${secScore}%"></div>
             </div>
           </div>
         </div>

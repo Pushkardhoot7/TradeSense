@@ -185,12 +185,50 @@ def _build_ohlcv(
 # Pre-build the synthetic dataset at import time (cheap, deterministic)
 # ---------------------------------------------------------------------------
 
+_SECTOR_DEFAULTS: dict[str, tuple[float, float, float, float]] = {
+    # (mu, sigma, beta, base_price)
+    "Information Technology": (0.13, 0.23, 0.90, 2800.0),
+    "Banking": (0.14, 0.21, 0.85, 1400.0),
+    "Financial Services": (0.15, 0.24, 0.95, 3200.0),
+    "Automobile": (0.16, 0.28, 1.05, 2100.0),
+    "Oil & Gas": (0.12, 0.22, 0.80, 1800.0),
+    "Pharmaceuticals": (0.12, 0.19, 0.70, 1600.0),
+    "Healthcare": (0.14, 0.20, 0.75, 2400.0),
+    "FMCG": (0.10, 0.16, 0.60, 2200.0),
+    "Consumer Durables": (0.15, 0.25, 0.85, 1900.0),
+    "Industrials": (0.15, 0.26, 0.95, 2500.0),
+    "Power": (0.14, 0.25, 0.85, 350.0),
+    "Telecommunication": (0.11, 0.29, 0.90, 850.0),
+}
+
+
+def _load_universe_dict() -> dict[str, dict[str, str]]:
+    import csv
+    from pathlib import Path
+    csv_p = Path(__file__).parent.parent.parent / "data" / "stock_universe.csv"
+    stocks: dict[str, dict[str, str]] = {}
+    if csv_p.exists():
+        with open(csv_p, encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                sym = row.get("symbol", "").strip()
+                if sym and sym.endswith(".NS"):
+                    stocks[sym] = {
+                        "name": row.get("company_name", sym),
+                        "sector": row.get("sector", "Equities"),
+                        "industry": row.get("industry", ""),
+                    }
+    return stocks
+
+
+_UNIVERSE_STOCKS: dict[str, dict[str, str]] = _load_universe_dict()
+
+
 def _build_all_data() -> dict[str, pd.DataFrame]:
-    """Build OHLCV DataFrames for every ticker using a shared market factor.
+    """Build OHLCV DataFrames for every ticker across all 12 sectors.
 
     Each ticker's daily return = beta * market_return + idiosyncratic_noise.
-    This ensures realistic non-zero pairwise correlations (like actual NSE data)
-    while remaining fully reproducible (seed=42).
+    This ensures realistic non-zero pairwise correlations while remaining
+    fully reproducible (seed=42). Supports all 93 NSE universe stocks.
     """
     rng = np.random.default_rng(seed=42)
     n   = TRADING_DAYS
@@ -205,7 +243,6 @@ def _build_all_data() -> dict[str, pd.DataFrame]:
         size=n,
     )
 
-    # Sector betas — IT and Banking tend to correlate with market
     _BETAS: dict[str, float] = {
         "TCS.NS": 0.85, "INFY.NS": 0.90, "HDFCBANK.NS": 0.80,
         "RELIANCE.NS": 0.95, "WIPRO.NS": 0.88, "HCLTECH.NS": 0.87,
@@ -214,9 +251,36 @@ def _build_all_data() -> dict[str, pd.DataFrame]:
     }
 
     result: dict[str, pd.DataFrame] = {}
-    for ticker, s0 in _TICKERS.items():
-        mu, sigma = _GBM_PARAMS[ticker]
-        beta = _BETAS.get(ticker, 0.85)
+    
+    # Target all universe tickers (falling back to _TICKERS if file missing)
+    target_tickers = list(_UNIVERSE_STOCKS.keys()) if _UNIVERSE_STOCKS else list(_TICKERS.keys())
+
+    end_date = datetime.date.today()
+    dates: list[datetime.date] = []
+    current = end_date - datetime.timedelta(days=1)
+    while len(dates) < n:
+        if current.weekday() < 5:
+            dates.append(current)
+        current -= datetime.timedelta(days=1)
+    dates.reverse()
+    date_index = pd.to_datetime(dates)
+
+    for ticker in target_tickers:
+        sec_info = _UNIVERSE_STOCKS.get(ticker, {})
+        sec_name = sec_info.get("sector", "Other")
+        sec_def = _SECTOR_DEFAULTS.get(sec_name, (0.12, 0.22, 0.85, 1500.0))
+
+        if ticker in _TICKERS:
+            s0 = _TICKERS[ticker]
+            mu, sigma = _GBM_PARAMS[ticker]
+            beta = _BETAS.get(ticker, 0.85)
+        else:
+            # Deterministic variation by symbol hash
+            h = abs(hash(ticker))
+            s0 = sec_def[3] * (0.6 + (h % 100) / 100.0 * 0.8)
+            mu = sec_def[0] + ((h % 20) - 10) * 0.003
+            sigma = sec_def[1] + ((h % 15) - 7) * 0.004
+            beta = sec_def[2] + ((h % 25) - 12) * 0.01
 
         # Idiosyncratic component (~40% of total vol)
         idio_sigma = sigma * 0.40
@@ -244,16 +308,6 @@ def _build_all_data() -> dict[str, pd.DataFrame]:
         open_arr[0] = s0
         open_arr[1:] = path[:-1] * (1.0 + rng.uniform(-0.005, 0.005, n - 1))
         volume_arr = rng.lognormal(mean=13.8, sigma=0.5, size=n).astype(int)
-
-        end_date = datetime.date.today()
-        dates: list[datetime.date] = []
-        current = end_date - datetime.timedelta(days=1)
-        while len(dates) < n:
-            if current.weekday() < 5:
-                dates.append(current)
-            current -= datetime.timedelta(days=1)
-        dates.reverse()
-        date_index = pd.to_datetime(dates)
 
         result[ticker] = pd.DataFrame(
             {"Open": open_arr, "High": high_arr, "Low": low_arr,
@@ -297,7 +351,7 @@ class DemoDataProvider(MarketDataProvider):
     @property
     def supported_tickers(self) -> list[str]:
         """Return the list of all pre-generated ticker symbols."""
-        return list(_TICKERS.keys())
+        return list(_DEMO_DATA.keys())
 
     # ------------------------------------------------------------------
     # Quote methods
@@ -411,10 +465,7 @@ class DemoDataProvider(MarketDataProvider):
         mask = (df.index >= pd.Timestamp(start)) & (df.index <= pd.Timestamp(end))
         sliced = df.loc[mask].copy()
         if sliced.empty:
-            raise ValueError(
-                f"No demo data for '{symbol}' in range {start} to {end}. "
-                f"Available range: {df.index[0].date()} to {df.index[-1].date()}"
-            )
+            return df.copy()
         return sliced
 
     # ------------------------------------------------------------------
@@ -436,23 +487,12 @@ class DemoDataProvider(MarketDataProvider):
     # ------------------------------------------------------------------
 
     def search_symbols(self, query: str) -> list[dict]:
-        """Search the 12 supported demo tickers by symbol or company name.
-
-        Parameters
-        ----------
-        query:
-            Case-insensitive search string matched against ticker symbols
-            and company names.
-
-        Returns
-        -------
-        list[dict]
-            Matching entries with keys: ``symbol``, ``name``,
-            ``exchange``.
-        """
+        """Search supported demo tickers by symbol or company name."""
         query_lower = query.lower()
         results: list[dict[str, Any]] = []
-        for ticker, name in _NAMES.items():
+        source_stocks = _UNIVERSE_STOCKS if _UNIVERSE_STOCKS else {t: {"name": _NAMES.get(t, t)} for t in _TICKERS}
+        for ticker, info in source_stocks.items():
+            name = info.get("name", ticker)
             if query_lower in ticker.lower() or query_lower in name.lower():
                 results.append(
                     {

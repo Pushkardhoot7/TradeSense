@@ -45,28 +45,62 @@ window.TradeSense = (function() {
     if (n == null || isNaN(n)) return '—';
     return '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2 });
   }
-  function setDataModeBadge(mode) {
+  function setDataModeBadge(mode, isOpen = null) {
     const badge = document.getElementById('data-mode-badge');
+    const mBadge = document.getElementById('market-status-badge');
+    const mText = document.getElementById('market-status-text');
+    const mDot = document.getElementById('market-status-dot');
     const sidebar = document.getElementById('sidebar-data-mode');
+    const txtSpan = document.getElementById('sidebar-mode-text');
     const m = (mode || '').toUpperCase();
-    let text = '● LIVE • NSE';
-    let cls = 'badge-live';
     
-    if (m.includes('LIVE') || m.includes('HIST')) {
-      text = '● LIVE • NSE';
+    let text = '● NSE CLOSED • CLOSING PRICES';
+    let cls = 'badge-live';
+    let sidebarText = 'NSE CLOSED · CLOSING PRICES';
+    
+    if (m === 'LIVE' || (m.includes('LIVE') && isOpen === true)) {
+      text = '● LIVE • NSE (OPEN)';
+      sidebarText = '● LIVE · NSE (OPEN)';
       cls = 'badge-live';
+      if (mDot) { mDot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse'; }
+      if (mBadge) { mBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all'; }
+    } else if (m.includes('HIST') || m === 'CLOSED' || isOpen === false) {
+      text = '● NSE CLOSED • CLOSING PRICES';
+      sidebarText = 'NSE CLOSED · CLOSING PRICES';
+      cls = 'px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-700 border border-amber-500/30';
+      if (mDot) { mDot.className = 'w-2 h-2 rounded-full bg-amber-500'; }
+      if (mBadge) { mBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 transition-all'; }
     } else if (m.includes('DEMO')) {
-      text = 'DEMO DATA';
+      text = '⚠️ DEMO DATA (SYNTHETIC)';
+      sidebarText = '⚠️ DEMO (SYNTHETIC)';
       cls = 'badge-demo';
+      if (mDot) { mDot.className = 'w-2 h-2 rounded-full bg-indigo-500'; }
+      if (mBadge) { mBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 transition-all'; }
     } else if (m.includes('UNAVAIL') || m.includes('FAIL')) {
-      text = 'Live data unavailable';
+      text = '⚠️ DATA UNAVAILABLE';
+      sidebarText = 'DATA UNAVAILABLE';
       cls = 'px-2 py-0.5 rounded font-bold text-xs bg-rose-100 text-rose-800 border border-rose-300';
+      if (mDot) { mDot.className = 'w-2 h-2 rounded-full bg-rose-500'; }
+      if (mBadge) { mBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 transition-all'; }
     }
     
     if (badge) { badge.textContent = text; badge.className = cls + ' cursor-pointer text-xs'; }
-    if (sidebar) { 
-      const txtSpan = document.getElementById('sidebar-mode-text');
-      if (txtSpan) txtSpan.textContent = text;
+    if (mText) { mText.textContent = text; }
+    if (txtSpan) { txtSpan.textContent = sidebarText; }
+  }
+
+  async function initMarketStatus() {
+    try {
+      const data = await apiCall('/api/market/status');
+      if (data) {
+        const lastUp = document.getElementById('last-updated');
+        if (lastUp && data.last_updated) {
+          lastUp.textContent = data.last_updated;
+        }
+        setDataModeBadge(data.data_mode || (data.is_open ? 'LIVE' : 'HISTORICAL CLOSING'), data.is_open);
+      }
+    } catch(err) {
+      console.warn("Could not fetch market status:", err);
     }
   }
 
@@ -132,7 +166,8 @@ window.TradeSense = (function() {
 
     // Use simple circular layout for nodes
     const tickers = Object.keys(coloring_dict).length > 0 ? Object.keys(coloring_dict) :
-      [...new Set(edges.flatMap(e => [e.source, e.target]))];
+      (graphData.tickers && graphData.tickers.length > 0 ? graphData.tickers :
+      [...new Set(edges.flatMap(e => [e.source, e.target]))]);
     const n = tickers.length;
     const pos = {};
     tickers.forEach((t, i) => {
@@ -390,10 +425,16 @@ window.TradeSense = (function() {
     }
   });
 
+  if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initMarketStatus();
+    });
+  }
+
   // ── Public API ───────────────────────────────────────────────────────────
   return {
     apiCall, showLoading, hideLoading,
-    formatNumber, formatPercent, formatCurrency, setDataModeBadge,
+    formatNumber, formatPercent, formatCurrency, setDataModeBadge, initMarketStatus,
     renderCorrelationHeatmap, renderNetworkGraph, renderHasseDiagram,
     renderPortfolioRadar, renderPriceChart, renderPortfolioCards,
     updateKpiCards, openDataSourceModal, closeDataSourceModal, triggerRefresh,

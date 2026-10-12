@@ -53,9 +53,11 @@ def market_status():
         "status": status,
         "short_status": short_status,
         "is_open": is_open,
+        "data_mode": "LIVE" if is_open else "HISTORICAL CLOSING",
         "message": msg,
         "exchange": "NSE",
         "timestamp": now_ist.strftime("%d %b %Y, %H:%M:%S IST"),
+        "last_updated": now_ist.strftime("%H:%M:%S IST"),
         "session": "Regular Trading" if is_open else status,
     }
 

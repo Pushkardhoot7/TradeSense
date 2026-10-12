@@ -216,7 +216,28 @@ async function loadUnifiedReport() {
     const stocksCount = overview?.stocks_analyzed || 93;
     document.getElementById('rep-stocks-count').textContent = stocksCount;
     document.getElementById('rep-synced-time').textContent = overview?.created_at || 'Latest';
-    document.getElementById('rep-pipeline-mode').textContent = (overview?.data_mode || 'LIVE').toUpperCase();
+    
+    const mode = (overview?.data_mode || 'LIVE').toUpperCase();
+    const repStatus = document.getElementById('rep-market-status');
+    const pipeMode = document.getElementById('rep-pipeline-mode');
+    if (repStatus) {
+      if (mode.includes('LIVE')) {
+        repStatus.textContent = '● LIVE • NSE (OPEN)';
+        repStatus.className = 'px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
+      } else if (mode.includes('HIST') || mode.includes('CLOSED')) {
+        repStatus.textContent = '● NSE CLOSED • CLOSING PRICES';
+        repStatus.className = 'px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200';
+      } else if (mode.includes('DEMO')) {
+        repStatus.textContent = '⚠️ DEMO (SYNTHETIC)';
+        repStatus.className = 'px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200';
+      } else {
+        repStatus.textContent = 'DATA UNAVAILABLE';
+        repStatus.className = 'px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200';
+      }
+    }
+    if (pipeMode) {
+      pipeMode.textContent = mode.includes('LIVE') ? 'LIVE' : (mode.includes('HIST') || mode.includes('CLOSED') ? 'CLOSING' : (mode.includes('DEMO') ? 'DEMO' : 'UNAVAIL'));
+    }
 
     // 2. Sector Analysis Table
     const sectors = secRes?.sectors || [];

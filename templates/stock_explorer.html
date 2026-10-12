@@ -360,7 +360,7 @@ function onStockChange(symbol) {
 }
 
 function loadStockDetails(symbol) {
-  const stock = allStocksData.find(s => s.symbol === symbol) || { symbol: symbol, return_pct: 12.0, risk_pct: 16.0, sharpe: 1.1 };
+  const stock = allStocksData.find(s => s.symbol === symbol) || { symbol: symbol, return_pct: null, risk_pct: null, sharpe: null, latest_price: null };
 
   // Headers
   document.getElementById('selected-symbol-title').textContent = stock.symbol;
@@ -368,18 +368,23 @@ function loadStockDetails(symbol) {
   document.getElementById('partner-stock-name').textContent = stock.symbol;
 
   // KPIs
-  document.getElementById('stat-price').textContent = TradeSense.formatCurrency(stock.latest_price || 0);
+  document.getElementById('stat-price').textContent = stock.latest_price != null ? TradeSense.formatCurrency(stock.latest_price) : 'Data unavailable';
   document.getElementById('stat-sector').textContent = stock.sector || 'Equities';
   
   const retEl = document.getElementById('stat-return');
-  retEl.textContent = TradeSense.formatPercent(stock.return_pct || 0);
-  retEl.className = `text-xl font-black ${(stock.return_pct || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'} mt-1`;
+  if (stock.return_pct != null) {
+    retEl.textContent = TradeSense.formatPercent(stock.return_pct);
+    retEl.className = `text-xl font-black ${stock.return_pct >= 0 ? 'text-emerald-600' : 'text-rose-600'} mt-1`;
+  } else {
+    retEl.textContent = 'Data unavailable';
+    retEl.className = 'text-base font-bold text-slate-400 mt-1';
+  }
 
-  document.getElementById('stat-risk').textContent = (stock.risk_pct || 0).toFixed(1) + '%';
-  document.getElementById('stat-sharpe').textContent = (stock.sharpe || 0).toFixed(2);
+  document.getElementById('stat-risk').textContent = stock.risk_pct != null ? `${stock.risk_pct.toFixed(1)}%` : 'Data unavailable';
+  document.getElementById('stat-sharpe').textContent = stock.sharpe != null ? stock.sharpe.toFixed(2) : 'Data unavailable';
 
-  const colorGroup = allColoringData.coloring_dict ? allColoringData.coloring_dict[symbol] : 1;
-  document.getElementById('stat-group').textContent = `Group ${colorGroup !== undefined ? colorGroup : '—'}`;
+  const colorGroup = allColoringData.coloring_dict ? allColoringData.coloring_dict[symbol] : null;
+  document.getElementById('stat-group').textContent = colorGroup !== undefined && colorGroup !== null ? `Group ${colorGroup}` : 'Data unavailable';
 
   const nonDominated = (allRelationData.non_dominated || []).includes(symbol);
   document.getElementById('stat-poset').textContent = nonDominated ? '👑 Non-Dominated' : 'Standard Tier';
