@@ -144,62 +144,163 @@ window.TradeSense = (function() {
   function renderCorrelationHeatmap(containerId, matrix, labels) {
     const el = document.getElementById(containerId);
     if (!el || !matrix || !labels) return;
-    const z  = labels.map(r => labels.map(c => (matrix[r] && matrix[r][c] != null) ? matrix[r][c] : 0));
+
+    // Diverging Color Scale: Blue (-1.0) -> Neutral (#f8fafc) -> Red (+1.0)
+    const divergingScale = [
+      [0.0, '#1d4ed8'],
+      [0.25, '#60a5fa'],
+      [0.50, '#f8fafc'],
+      [0.75, '#fb7185'],
+      [1.0, '#dc2626']
+    ];
+
+    const cleanLabels = labels.map(s => s.replace('.NS', ''));
+    const z = labels.map(r => labels.map(c => (matrix[r] && matrix[r][c] != null) ? matrix[r][c] : (r === c ? 1.0 : 0)));
+    const showValues = labels.length <= 15;
+
     Plotly.newPlot(el, [{
-      type: 'heatmap', z, x: labels, y: labels,
-      colorscale: 'RdYlGn', zmin: -1, zmax: 1,
-      text: z.map(row => row.map(v => v.toFixed(2))),
-      texttemplate: '%{text}', showscale: true,
-      hovertemplate: '%{y} × %{x}: %{z:.3f}<extra></extra>',
+      type: 'heatmap',
+      z: z,
+      x: cleanLabels,
+      y: cleanLabels,
+      colorscale: divergingScale,
+      zmin: -1.0,
+      zmax: 1.0,
+      text: showValues ? z.map(row => row.map(v => v.toFixed(2))) : undefined,
+      texttemplate: showValues ? '%{text}' : undefined,
+      showscale: true,
+      colorbar: {
+        title: { text: 'r', side: 'right', font: { family: 'Inter', size: 10 } },
+        thickness: 12,
+        len: 0.85,
+        tickvals: [-1, -0.5, 0, 0.5, 1],
+        ticktext: ['-1.0', '-0.5', '0.0', '+0.5', '+1.0'],
+      },
+      hovertemplate: '%{y} ↔ %{x}: <b>%{z:.3f}</b><extra></extra>',
     }], {
-      margin: { t: 40, l: 100, r: 20, b: 100 },
-      paper_bgcolor: 'white', plot_bgcolor: 'white',
-      xaxis: { tickangle: -45 }, font: { family: 'Inter, sans-serif', size: 11 },
-    }, { responsive: true });
+      margin: { t: 25, l: 60, r: 20, b: 60 },
+      paper_bgcolor: 'white',
+      plot_bgcolor: 'white',
+      xaxis: { tickangle: -45, tickfont: { size: labels.length > 20 ? 8 : 10 } },
+      yaxis: { autorange: 'reversed', tickfont: { size: labels.length > 20 ? 8 : 10 } },
+      font: { family: 'Inter, sans-serif', size: 10 },
+    }, { responsive: true, displayModeBar: false });
   }
 
-  // ── Plotly: Network Graph ────────────────────────────────────────────────
+  // ── Plotly: Network Graph (Force-Directed) ────────────────────────────────
   function renderNetworkGraph(containerId, graphData) {
     const el = document.getElementById(containerId);
     if (!el || !graphData) return;
     const { edges = [], stats = {}, coloring_dict = {} } = graphData;
 
-    // Use simple circular layout for nodes
     const tickers = Object.keys(coloring_dict).length > 0 ? Object.keys(coloring_dict) :
       (graphData.tickers && graphData.tickers.length > 0 ? graphData.tickers :
       [...new Set(edges.flatMap(e => [e.source, e.target]))]);
-    const n = tickers.length;
+
+    const N = tickers.length;
+    if (N === 0) return;
+
+    // Fast 2D force simulation for natural component clustering
     const pos = {};
     tickers.forEach((t, i) => {
-      const angle = (2 * Math.PI * i) / n;
-      pos[t] = { x: Math.cos(angle), y: Math.sin(angle) };
+      const angle = (2 * Math.PI * i) / N;
+      const r = 0.65 + (i % 3) * 0.08;
+      pos[t] = { x: Math.cos(angle) * r, y: Math.sin(angle) * r, vx: 0, vy: 0 };
     });
 
-    // Edge traces
+    const k = Math.sqrt(4.0 / N);
+    const iterations = 50;
+    let temp = 0.12;
+
+    for (let it = 0; it < iterations; it++) {
+      // Repulsion
+      for (let i = 0; i < N; i++) {
+        const u = tickers[i];
+        for (let j = i + 1; j < N; j++) {
+          const v = tickers[j];
+          const dx = pos[u].x - pos[v].x;
+          const dy = pos[u].y - pos[v].y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+          const f = (k * k) / dist;
+          pos[u].vx += (dx / dist) * f;
+          pos[u].vy += (dy / dist) * f;
+          pos[v].vx -= (dx / dist) * f;
+          pos[v].vy -= (dy / dist) * f;
+        }
+      }
+      // Attraction along edges
+      edges.forEach(e => {
+        const u = e.source, v = e.target;
+        if (!pos[u] || !pos[v]) return;
+        const dx = pos[v].x - pos[u].x;
+        const dy = pos[v].y - pos[u].y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        const f = ((dist * dist) / k) * 1.5;
+        pos[u].vx += (dx / dist) * f;
+        pos[u].vy += (dy / dist) * f;
+        pos[v].vx -= (dx / dist) * f;
+        pos[v].vy -= (dy / dist) * f;
+      });
+      // Gravity
+      tickers.forEach(t => {
+        const p = pos[t];
+        const distCenter = Math.sqrt(p.x * p.x + p.y * p.y) || 0.01;
+        p.vx -= (p.x / distCenter) * 0.05 * distCenter;
+        p.vy -= (p.y / distCenter) * 0.05 * distCenter;
+        const disp = Math.sqrt(p.vx * p.vx + p.vy * p.vy) || 0.01;
+        const lim = Math.min(disp, temp);
+        p.x += (p.vx / disp) * lim;
+        p.y += (p.vy / disp) * lim;
+        p.vx = 0; p.vy = 0;
+      });
+      temp *= 0.94;
+    }
+
+    // Edge lines
     const edgeX = [], edgeY = [];
     edges.forEach(e => {
       const s = pos[e.source], t = pos[e.target];
       if (s && t) { edgeX.push(s.x, t.x, null); edgeY.push(s.y, t.y, null); }
     });
 
-    // Color palette for groups
-    const palette = ['#4f46e5','#0ea5e9','#16a34a','#dc2626','#d97706','#9333ea','#0d9488','#db2777','#65a30d','#ea580c'];
+    const palette = ['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ec4899','#8b5cf6','#06b6d4','#84cc16','#f97316','#64748b'];
+    const degrees = stats.degrees || {};
+    const topHub = stats.most_connected_stock;
+
+    // Node sizing based on degree
+    const nodeSizes = tickers.map(t => Math.min(12 + (degrees[t] || 0) * 2.2, 24));
     const nodeColors = tickers.map(t => palette[(coloring_dict[t] || 0) % palette.length]);
 
-    const edgeTrace = { type: 'scatter', x: edgeX, y: edgeY, mode: 'lines',
-      line: { width: 1.5, color: '#cbd5e1' }, hoverinfo: 'none' };
-    const nodeTrace = { type: 'scatter', x: tickers.map(t => pos[t].x), y: tickers.map(t => pos[t].y),
-      mode: 'markers+text', text: tickers.map(t => t.replace('.NS','')),
-      textposition: 'top center', textfont: { size: 10, family: 'Inter' },
-      marker: { size: 18, color: nodeColors, line: { width: 2, color: '#fff' } },
-      hovertemplate: '%{text}<extra></extra>', };
+    // Show labels only for hubs or if universe is small, avoiding overlapping clutter
+    const nodeLabels = tickers.map(t => (N <= 20 || (degrees[t] || 0) >= 3 || t === topHub) ? t.replace('.NS','') : '');
+
+    const edgeTrace = {
+      type: 'scatter', x: edgeX, y: edgeY, mode: 'lines',
+      line: { width: 1.2, color: '#cbd5e1' }, hoverinfo: 'none', showlegend: false
+    };
+
+    const nodeTrace = {
+      type: 'scatter',
+      x: tickers.map(t => pos[t].x),
+      y: tickers.map(t => pos[t].y),
+      mode: 'markers+text',
+      text: nodeLabels,
+      textposition: 'top center',
+      textfont: { size: 10, family: 'Inter', color: '#1e293b', weight: 'bold' },
+      marker: { size: nodeSizes, color: nodeColors, line: { width: 1.5, color: '#ffffff' } },
+      hovertemplate: tickers.map(t => `<b>${t.replace('.NS','')}</b><br>Degree: ${degrees[t] || 0}<br>Group: ${(coloring_dict[t] || 0) + 1}<extra></extra>`),
+      showlegend: false
+    };
 
     Plotly.newPlot(el, [edgeTrace, nodeTrace], {
-      showlegend: false, margin: { t: 20, l: 20, r: 20, b: 20 },
+      showlegend: false,
+      margin: { t: 20, l: 20, r: 20, b: 20 },
+      dragmode: 'pan',
       xaxis: { showgrid: false, zeroline: false, showticklabels: false },
       yaxis: { showgrid: false, zeroline: false, showticklabels: false },
-      paper_bgcolor: 'white', plot_bgcolor: '#f8fafc',
-    }, { responsive: true });
+      paper_bgcolor: 'white',
+      plot_bgcolor: '#f8fafc',
+    }, { responsive: true, displayModeBar: true, displaylogo: false });
   }
 
   // ── Plotly: Hasse Diagram ────────────────────────────────────────────────

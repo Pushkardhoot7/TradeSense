@@ -1,135 +1,308 @@
 {% extends "base.html" %}
 
-{% block title %}Relationships — Pearson Correlation Network{% endblock %}
-{% block page_title %}🔗 Relationships & Pearson Correlation{% endblock %}
-{% block page_subtitle %}Quantifying linear co-movement between assets across aligned daily return time-series{% endblock %}
+{% block title %}Market Relationships — Network & Correlation Matrix{% endblock %}
+{% block page_title %}Market Relationships{% endblock %}
+{% block page_subtitle %}Explore how stocks move together and investigate historical correlation patterns.{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
 
-  <!-- Top Metric Cards -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">Matrix Properties</div>
-      <div class="text-sm font-bold text-emerald-600 mt-1 flex items-center gap-1">
-        <span>✓</span> Symmetric & Bounded [-1, 1]
+  <!-- ── Top Controls & View Toggle Bar ─────────────────────────────────── -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4 flex-wrap">
+      <!-- Sensitivity Threshold Slider -->
+      <div>
+        <div class="flex items-center justify-between text-[11px] mb-1">
+          <label class="text-[10px] uppercase font-bold text-slate-400">Correlation Sensitivity Threshold</label>
+          <span id="threshold-display-val" class="font-mono font-bold text-indigo-600 ml-2">0.70</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] text-slate-400 font-mono">0.50</span>
+          <input type="range" id="threshold-slider" min="0.50" max="0.90" step="0.05" value="0.70"
+                 oninput="TradeSenseMarketRel.setThreshold(this.value)"
+                 class="w-40 sm:w-56 accent-indigo-600 cursor-pointer"/>
+          <span class="text-[10px] text-slate-400 font-mono">0.90</span>
+        </div>
       </div>
-      <div class="text-[11px] text-slate-500 mt-0.5">Diagonal Identity = 1.0</div>
+
+      <div class="h-8 w-px bg-slate-200 hidden md:block"></div>
+
+      <!-- Quick Threshold Presets -->
+      <div class="hidden sm:flex items-center gap-1.5 text-xs">
+        <span class="text-slate-400 text-[11px]">Presets:</span>
+        <button onclick="document.getElementById('threshold-slider').value='0.60'; TradeSenseMarketRel.setThreshold(0.60);" class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-mono font-bold">0.60</button>
+        <button onclick="document.getElementById('threshold-slider').value='0.70'; TradeSenseMarketRel.setThreshold(0.70);" class="px-2 py-1 rounded bg-indigo-100 text-indigo-700 text-[11px] font-mono font-bold">0.70</button>
+        <button onclick="document.getElementById('threshold-slider').value='0.80'; TradeSenseMarketRel.setThreshold(0.80);" class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-mono font-bold">0.80</button>
+      </div>
     </div>
-    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">Highest Correlation Pair</div>
-      <div id="stat-max-pair" class="text-sm font-black text-slate-900 mt-1 truncate">TCS ↔ INFY</div>
-      <div id="stat-max-val" class="text-[11px] text-amber-600 font-bold font-mono mt-0.5">r = 0.884</div>
-    </div>
-    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">Lowest Correlation Pair</div>
-      <div id="stat-min-pair" class="text-sm font-black text-slate-900 mt-1 truncate">HDFC ↔ TCS</div>
-      <div id="stat-min-val" class="text-[11px] text-indigo-600 font-bold font-mono mt-0.5">r = 0.120</div>
-    </div>
-    <div class="kpi-card p-4 rounded-xl bg-white border border-slate-200">
-      <div class="text-[10px] font-bold uppercase text-slate-400">Average Matrix Correlation</div>
-      <div id="stat-mean-corr" class="text-xl font-black text-slate-800 mt-1 font-mono">0.452</div>
-      <div class="text-[11px] text-slate-500 mt-0.5">Across all C(N,2) pairs</div>
+
+    <!-- View Mode Switcher: Simple View vs Technical View -->
+    <div class="flex items-center gap-2">
+      <span class="text-[11px] font-medium text-slate-400 hidden xs:inline">Mode:</span>
+      <div class="inline-flex p-1 rounded-xl bg-slate-100 border border-slate-200">
+        <button id="btn-view-simple" onclick="TradeSenseMarketRel.setViewMode('simple')" class="px-3 py-1 text-xs font-bold rounded-lg bg-indigo-600 text-white shadow-xs transition-colors">
+          Simple View
+        </button>
+        <button id="btn-view-technical" onclick="TradeSenseMarketRel.setViewMode('technical')" class="px-3 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+          Technical View
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Heatmap & Pairwise Relationships Grid -->
+  <!-- ── Phase 5: Four Summary KPI Cards ─────────────────────────────────── -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Card 1: Eligible Stocks -->
+    <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Eligible Stocks</div>
+      <div id="kpi-rel-stocks" class="text-2xl font-black text-slate-900 mt-1 font-mono">93</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Validated analysis universe</div>
+    </div>
+
+    <!-- Card 2: Active Connections -->
+    <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Active Connections</div>
+      <div id="kpi-rel-edges" class="text-2xl font-black text-indigo-600 mt-1 font-mono">0</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Pairwise links where |r| ≥ threshold</div>
+    </div>
+
+    <!-- Card 3: Network Density -->
+    <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Network Density</div>
+      <div id="kpi-rel-density" class="text-2xl font-black text-purple-600 mt-1 font-mono">0.0%</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Ratio of actual to possible edges</div>
+    </div>
+
+    <!-- Card 4: Correlation Threshold -->
+    <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Correlation Threshold</div>
+      <div id="kpi-rel-threshold" class="text-2xl font-black text-amber-600 mt-1 font-mono">r ≥ 0.70</div>
+      <div class="text-[11px] text-slate-500 mt-0.5">Active edge qualification cutoff</div>
+    </div>
+  </div>
+
+  <!-- ── Phase 5: 60/40 Split Content Row (Network + Heatmap) ─────────────── -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-    
-    <!-- Heatmap Column (8 cols) -->
-    <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-      <div class="flex items-center justify-between">
+
+    <!-- Left Column (~60% on desktop): Market Connection Network -->
+    <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs flex flex-col space-y-4">
+      <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
         <div>
-          <h3 class="text-sm font-bold text-slate-900">Pearson Correlation Matrix Heatmap</h3>
-          <p class="text-xs text-slate-500 mt-0.5">Colors scale from -1.0 (uncorrelated/inverse) to +1.0 (lockstep co-movement)</p>
+          <h3 class="text-sm font-bold text-slate-900">Market Connection Network</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Force-directed topology: connected stocks cluster together</p>
         </div>
-        <div class="flex items-center gap-1 text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">
-          <span>N = 12 Stocks</span>
+        <div class="flex items-center gap-1.5 text-[11px]">
+          <button onclick="TradeSenseMarketRel.clearSelection()" class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold transition-colors" title="Reset highlighted stock focus">
+            Reset View
+          </button>
         </div>
       </div>
 
-      <!-- Plotly Heatmap Container -->
-      <div id="correlation-heatmap" class="w-full h-[520px] rounded-xl overflow-hidden">
+      <!-- Network Plot Container -->
+      <div id="market-network-plot" class="w-full h-[540px] rounded-xl overflow-hidden bg-slate-50 relative">
         <div class="flex items-center justify-center h-full text-slate-400 text-xs">
-          <span class="animate-spin mr-2">⚙️</span> Computing Pearson Correlation Matrix...
+          <span class="animate-spin mr-2">⚙️</span> Simulating force-directed network layout...
         </div>
+      </div>
+
+      <!-- Visible Legend Bar -->
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-600">
+        <div class="flex items-center gap-4 flex-wrap">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-indigo-600 inline-block"></span>
+            <span>Node Size = Connections (Degree)</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-4 h-0.5 bg-slate-400 inline-block"></span>
+            <span>Edge = Pairwise |r| ≥ Threshold</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full border-2 border-amber-400 bg-indigo-600 inline-block"></span>
+            <span>Selected Stock Focus</span>
+          </div>
+        </div>
+        <span class="text-[10px] text-slate-400 font-medium">Click any node to isolate connections</span>
       </div>
     </div>
 
-    <!-- Strongest Pairs & Concept (4 cols) -->
-    <div class="lg:col-span-4 space-y-6">
-      
-      <!-- Strong Pairs List -->
-      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-3">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Top Co-Moving Pairs</h4>
-          <span class="text-[10px] text-indigo-600 font-mono font-bold">r ≥ 0.70</span>
+    <!-- Right Column (~40% on desktop): Correlation Matrix Heatmap -->
+    <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs flex flex-col space-y-4">
+      <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Correlation Matrix</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Diverging scale from -1.0 (Blue) to +1.0 (Red)</p>
         </div>
-        <div id="strong-pairs-container" class="space-y-2 text-xs">
-          <!-- Populated via JS -->
+        
+        <!-- Subset Filter Selector -->
+        <select id="heatmap-subset-select" onchange="TradeSenseMarketRel.setSubset(this.value)" class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white font-medium text-slate-700">
+          <option value="all">All Eligible Stocks</option>
+          <option value="top20">Top 20 Most Connected</option>
+        </select>
+      </div>
+
+      <!-- Quick Search Bar -->
+      <div class="relative">
+        <input type="text" id="heatmap-search" placeholder="Filter stocks by ticker (e.g. TCS, RELIANCE)..."
+               oninput="TradeSenseMarketRel.setSearchQuery(this.value)"
+               class="w-full text-xs px-3 py-1.5 pl-8 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+        <span class="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
+      </div>
+
+      <!-- Heatmap Plot Container -->
+      <div id="correlation-heatmap-plot" class="w-full h-[475px] rounded-xl overflow-hidden bg-white relative">
+        <div class="flex items-center justify-center h-full text-slate-400 text-xs">
+          <span class="animate-spin mr-2">⚙️</span> Computing Pearson Correlation Heatmap...
         </div>
       </div>
 
-      <!-- Financial Meaning Box -->
-      <div class="bg-indigo-950 text-white rounded-2xl p-5 border border-indigo-900 space-y-2">
-        <div class="flex items-center gap-2 text-indigo-300 font-bold text-xs">
-          <span>💡</span> Why Correlation Matters
+      <!-- Selected Heatmap Pair Details Callout -->
+      <div id="selected-pair-card" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs hidden">
+        <div class="flex items-center justify-between">
+          <span id="pair-title" class="font-bold text-slate-900 text-xs">TCS ↔ INFY</span>
+          <div class="flex items-center gap-2">
+            <span id="pair-val" class="font-mono font-bold text-rose-600">r = 0.884</span>
+            <span id="pair-status" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Connected</span>
+          </div>
         </div>
-        <p class="text-xs text-indigo-100/80 leading-relaxed">
-          High correlation ($r > 0.70$) indicates redundant market risk. If two stocks move together, holding both fails to reduce risk. True portfolio diversification requires pairing assets with low or near-zero correlation.
+        <p id="pair-desc" class="text-[11px] text-slate-600 leading-relaxed">
+          Click any matrix cell to inspect pair correlation and edge qualification.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Interactive Stock Inspector Panel (Populated on Node/Cell Click) ── -->
+  <div id="stock-inspector-panel">
+    <!-- Populated dynamically by TradeSenseMarketRel.updateStockInspector -->
+    <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs text-center text-slate-400 text-xs">
+      💡 Tip: Click any stock node in the network or cell in the heatmap to isolate its co-moving partners and diversifiers.
+    </div>
+  </div>
+
+  <!-- ── Phase 6: Compact Network Insights ──────────────────────────────── -->
+  <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div>
+        <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wide">Network Insights</h4>
+        <p class="text-xs text-slate-500 mt-0.5">Empirical graph properties computed across active observation window</p>
+      </div>
+      <span class="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+        Graph G = (V, E)
+      </span>
+    </div>
+
+    <!-- 5-Metric Compact Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+        <span class="text-[10px] uppercase font-bold text-slate-400 block">Eligible Stocks (V)</span>
+        <strong id="insight-val-stocks" class="text-base text-slate-900 font-mono mt-0.5 block">93</strong>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+        <span class="text-[10px] uppercase font-bold text-slate-400 block">Active Connections (E)</span>
+        <strong id="insight-val-edges" class="text-base text-indigo-600 font-mono mt-0.5 block">0</strong>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+        <span class="text-[10px] uppercase font-bold text-slate-400 block">Network Density</span>
+        <strong id="insight-val-density" class="text-base text-purple-600 font-mono mt-0.5 block">0.0%</strong>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+        <span class="text-[10px] uppercase font-bold text-slate-400 block">Most Connected Stock</span>
+        <strong id="insight-val-hub" class="text-base text-slate-900 font-mono mt-0.5 block truncate">—</strong>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+        <span class="text-[10px] uppercase font-bold text-slate-400 block">Connected Components</span>
+        <strong id="insight-val-components" class="text-base text-emerald-600 font-mono mt-0.5 block">—</strong>
+      </div>
+    </div>
+
+    <!-- Clear Conceptual Distinctions -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 text-xs">
+      <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+        <span class="font-bold text-slate-800 flex items-center gap-1.5">
+          <span>🔗</span> Connected Components
+        </span>
+        <p class="text-[11px] text-slate-600 leading-relaxed">
+          Maximal subgraphs where every vertex can reach every other vertex via an active path of edges. Stocks within the same component share direct or transitive co-movement.
         </p>
       </div>
 
+      <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+        <span class="font-bold text-slate-800 flex items-center gap-1.5">
+          <span>🛡️</span> Independent Sets
+        </span>
+        <p class="text-[11px] text-slate-600 leading-relaxed">
+          Sets of vertices containing <strong>zero pairwise edges</strong>. Stocks in an independent set do not meet the co-movement threshold with one another, providing diversification candidates.
+        </p>
+      </div>
+
+      <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+        <span class="font-bold text-slate-800 flex items-center gap-1.5">
+          <span>🎨</span> Graph-Coloring Groups
+        </span>
+        <p class="text-[11px] text-slate-600 leading-relaxed">
+          A partition of the entire graph into disjoint independent sets such that no two adjacent vertices share the same color. Optimal coloring partitions the universe into mutually diversified buckets.
+        </p>
+      </div>
     </div>
 
+    <!-- Plain-Language Interpretation & Caution -->
+    <div class="p-4 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-900 space-y-1">
+      <div class="font-bold flex items-center gap-1.5">
+        <span>⚠️</span> Analytical Note on Portfolio Diversification
+      </div>
+      <p id="network-insight-explanation" class="text-[11px] text-amber-800 leading-relaxed">
+        A sparse correlation network indicates lower pairwise linear synchronization under the chosen threshold, but does not prove complete portfolio risk immunity. Unmodeled macroeconomic shocks or non-linear tail dependence can still affect stocks independently.
+      </p>
+    </div>
+  </div>
+
+  <!-- ── Phase 7: Technical View Math Panel (Hidden by default) ──────────── -->
+  <div id="technical-details-panel" class="hidden bg-slate-900 text-slate-200 rounded-2xl p-6 border border-slate-800 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+      <h4 class="text-sm font-bold text-white uppercase tracking-wider">Technical & Mathematical Specifications</h4>
+      <span class="text-xs font-mono text-indigo-400 font-bold">Discrete Mathematics Specification</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono text-slate-300">
+      <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
+        <span class="text-indigo-400 font-bold">1. Edge Qualification Rule</span>
+        <p class="text-[11px] leading-relaxed">
+          (u, v) ∈ E ⟺ |r_uv| ≥ θ, where r_uv is the Pearson sample correlation between daily log return series of assets u and v over window T.
+        </p>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
+        <span class="text-indigo-400 font-bold">2. Graph Density Formula</span>
+        <p class="text-[11px] leading-relaxed">
+          Density D = (2 · |E|) / (|V| · (|V| - 1)). Bounded in [0, 1]. Measures percentage of all C(N, 2) possible market relationships currently realized.
+        </p>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
+        <span class="text-indigo-400 font-bold">3. Adjacency Representation</span>
+        <p class="text-[11px] leading-relaxed">
+          G is represented as an adjacency dictionary Adj[u] = {(v, w_uv) : v ∈ N(u)}. Degree d(u) = |Adj[u]| denotes total active connections.
+        </p>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
+        <span class="text-indigo-400 font-bold">4. Welsh-Powell Chromatic Number</span>
+        <p class="text-[11px] leading-relaxed">
+          Vertices sorted by descending degree d(v). Greedy sequential assignment gives upper bound χ(G) ≤ Δ(G) + 1 on independent diversification groups.
+        </p>
+      </div>
+    </div>
   </div>
 
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/js/market_relationships.js"></script>
 <script>
-async function loadCorrelationPage() {
-  try {
-    const res = await TradeSense.apiCall('/api/correlation');
-    if (!res || !res.matrix) return;
-
-    const matrix = res.matrix;
-    const tickers = res.tickers || [];
-    const stats = res.stats || {};
-    const pairs = res.strong_pairs || [];
-
-    // Stats
-    if (stats.max_pair) {
-      document.getElementById('stat-max-pair').textContent = `${stats.max_pair[0]} ↔ ${stats.max_pair[1]}`;
-      document.getElementById('stat-max-val').textContent = `r = ${(stats.max_corr || 0).toFixed(3)}`;
-    }
-    if (stats.min_pair) {
-      document.getElementById('stat-min-pair').textContent = `${stats.min_pair[0]} ↔ ${stats.min_pair[1]}`;
-      document.getElementById('stat-min-val').textContent = `r = ${(stats.min_corr || 0).toFixed(3)}`;
-    }
-    if (stats.mean_corr !== undefined) {
-      document.getElementById('stat-mean-corr').textContent = stats.mean_corr.toFixed(3);
-    }
-
-    // Render Heatmap
-    TradeSense.renderCorrelationHeatmap('correlation-heatmap', matrix, tickers);
-
-    // Render Pairs
-    const container = document.getElementById('strong-pairs-container');
-    if (container && pairs.length > 0) {
-      container.innerHTML = pairs.slice(0, 6).map(p => `
-        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
-          <span class="font-bold text-slate-800">${p.stock_a} ↔ ${p.stock_b}</span>
-          <span class="font-mono font-bold text-amber-600">r = ${(p.correlation || 0).toFixed(3)}</span>
-        </div>
-      `).join('');
-    }
-  } catch(e) {
-    console.error("Correlation page error:", e);
-  }
-}
-
-document.addEventListener('DOMContentLoaded', loadCorrelationPage);
+document.addEventListener('DOMContentLoaded', () => {
+  TradeSenseMarketRel.init(0.70);
+});
 </script>
 {% endblock %}
