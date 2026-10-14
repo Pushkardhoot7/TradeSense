@@ -237,7 +237,7 @@ function renderActiveTab() {
             </div>
             <div class="pt-2 border-t border-slate-200/50 flex justify-between items-center text-[11px]">
               <span class="text-slate-500">Cohesion: <strong>${c.cohesion_level || 'Strong'}</strong></span>
-              <a href="/relationships" class="text-indigo-600 hover:text-indigo-800 font-bold underline">
+              <a href="/relationships?subset=${encodeURIComponent(c.members.join(','))}" class="text-indigo-600 hover:text-indigo-800 font-bold underline">
                 View in Network & Heatmap →
               </a>
             </div>
@@ -285,7 +285,9 @@ function renderActiveTab() {
           </div>
           <div class="pt-2 border-t border-slate-200/50 flex justify-between items-center text-[11px] text-emerald-700 font-medium">
             <span>✓ Verified Independent Set</span>
-            <span>Pick 1 Stock</span>
+            <a href="/relationships?subset=${encodeURIComponent(stocks.join(','))}" class="text-indigo-600 hover:text-indigo-800 font-bold underline">
+              View in Network & Heatmap →
+            </a>
           </div>
         </div>
       `;

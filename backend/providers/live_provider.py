@@ -4,6 +4,12 @@ live_provider.py
 Concrete Live MarketDataProvider for TradeSense V2.1.
 Connects to real-time and historical National Stock Exchange (NSE) market data via yfinance,
 with robust error classification, authorized backup provider failover, and strict data validation.
+
+Key improvements vs original:
+- Uses yfinance period= parameter (e.g. "1y") instead of start/end dates for reliability.
+- Instance-level auth-fail flag — one 401 error does NOT permanently block the process.
+- auto_adjust=True gives clean dividend/split-adjusted close prices.
+- Cache key based on (symbols, period, interval) so cache actually hits within a session.
 """
 
 from __future__ import annotations
@@ -30,6 +36,17 @@ logger = logging.getLogger(__name__)
 IST = timezone(timedelta(hours=5, minutes=30))
 CACHE_TTL_SECONDS = int(os.environ.get("TRADESENSE_CACHE_TTL_SECONDS", "600"))
 
+# Mapping from period string ("1y") → yfinance period string (same for yf ≥ 0.2)
+_YF_PERIOD_MAP: dict[str, str] = {
+    "1m": "1mo", "3m": "3mo", "6m": "6mo",
+    "1y": "1y",  "2y": "2y",  "3y": "3y",  "5y": "5y",
+}
+
+
+def _to_yf_period(period: str) -> str:
+    """Convert TradeSense period string to yfinance period string."""
+    return _YF_PERIOD_MAP.get(period, period)
+
 
 class LiveDataProvider(MarketDataProvider):
     """
@@ -39,16 +56,17 @@ class LiveDataProvider(MarketDataProvider):
     """
 
     # Class-level bounded in-memory cache:
-    # key: (tuple(sorted(symbols)), start, end, interval)
+    # key: (tuple(sorted(symbols)), period, interval)
     # val: (timestamp, data_dict, ticker_sources_dict, errors_dict)
     _cache: dict[tuple, tuple[float, dict[str, pd.DataFrame], dict[str, str], dict[str, MarketDataError]]] = {}
-    _yf_auth_failed: bool = False
 
     def __init__(self) -> None:
         self.backup_provider = BackupMarketDataProvider()
         self.last_errors: dict[str, MarketDataError] = {}
         self.ticker_sources: dict[str, str] = {}
         self.last_cache_hit: bool = False
+        # Instance-level flag — one 401 won't block the entire process lifetime
+        self._yf_auth_failed: bool = False
 
     # ------------------------------------------------------------------
     # Metadata
@@ -90,33 +108,54 @@ class LiveDataProvider(MarketDataProvider):
 
     def get_quote(self, symbol: str) -> dict:
         target_sym = symbol_registry.get_provider_symbol(symbol, "yfinance")
-        info: dict[str, Any] = {}
+        price = None
+        prev_close = None
+        volume = None
 
         if not self._yf_auth_failed:
             try:
                 ticker = yf.Ticker(target_sym)
-                info = ticker.fast_info if hasattr(ticker, "fast_info") else (ticker.info or {})
+                # Safely try fast_info without letting yfinance internal KeyError escape
+                if hasattr(ticker, "fast_info"):
+                    fi = ticker.fast_info
+                    try:
+                        price = getattr(fi, "last_price", None) or getattr(fi, "regular_market_price", None) or getattr(fi, "previous_close", None)
+                    except Exception:
+                        price = None
+                    try:
+                        prev_close = getattr(fi, "previous_close", None)
+                    except Exception:
+                        prev_close = None
+                    try:
+                        volume = getattr(fi, "last_volume", None)
+                    except Exception:
+                        volume = None
+
+                # Fallback to recent history if fast_info yielded no price
+                if price is None:
+                    try:
+                        hist = ticker.history(period="5d", auto_adjust=False)
+                        if not hist.empty:
+                            close_col = "Close" if "Close" in hist.columns else hist.columns[0]
+                            price = float(hist[close_col].iloc[-1])
+                            if len(hist) > 1:
+                                prev_close = float(hist[close_col].iloc[-2])
+                            if "Volume" in hist.columns:
+                                volume = int(hist["Volume"].iloc[-1])
+                    except Exception:
+                        pass
             except Exception as exc:
                 err = classify_yfinance_error(symbol, exc)
                 self.last_errors[symbol] = err
                 if err.category == MarketDataErrorCategory.PROVIDER_AUTH_ERROR:
-                    logger.warning("[LiveDataProvider] yfinance auth failure (HTTP 401) on %s. Flagging auth failure.", symbol)
+                    logger.warning("[LiveDataProvider] yfinance auth failure on %s. Will retry next call.", symbol)
                     self._yf_auth_failed = True
 
-        price = (
-            info.get("lastPrice")
-            or info.get("regularMarketPrice")
-            or info.get("currentPrice")
-            or info.get("previousClose")
-        )
-        prev_close = info.get("previousClose") or info.get("regularMarketPreviousClose")
         change = None
         change_pct = None
         if price is not None and prev_close is not None and prev_close != 0:
             change = price - prev_close
             change_pct = (change / prev_close) * 100
-
-        volume = info.get("lastVolume") or info.get("volume") or info.get("regularMarketVolume")
 
         # If live quote unavailable from yfinance, attempt backup provider
         source = "NSE via yfinance"
@@ -134,14 +173,12 @@ class LiveDataProvider(MarketDataProvider):
         now_ist = datetime.datetime.now(IST)
         session_date = now_ist.strftime("%Y-%m-%d")
         if not is_open:
-            # If weekend or pre-market, session date is the latest completed session
             weekday = now_ist.weekday()
-            if weekday == 5: # Saturday -> Friday
+            if weekday == 5:  # Saturday → Friday
                 session_date = (now_ist - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-            elif weekday == 6: # Sunday -> Friday
+            elif weekday == 6:  # Sunday → Friday
                 session_date = (now_ist - datetime.timedelta(days=2)).strftime("%Y-%m-%d")
             elif now_ist.hour < 9 or (now_ist.hour == 9 and now_ist.minute < 15):
-                # Before market open on Monday -> Friday
                 days_back = 3 if weekday == 0 else 1
                 session_date = (now_ist - datetime.timedelta(days=days_back)).strftime("%Y-%m-%d")
 
@@ -167,37 +204,69 @@ class LiveDataProvider(MarketDataProvider):
     # Historical data methods with Batch Acceleration & TTL Cache
     # ------------------------------------------------------------------
 
+    def _yf_download_with_period(
+        self,
+        query_symbols: list[str],
+        period: str,
+        interval: str,
+    ) -> pd.DataFrame:
+        """
+        Download via yfinance using period= parameter (more reliable than start/end for NSE).
+        Handles both single-ticker and multi-ticker column layouts.
+        """
+        yf_period = _to_yf_period(period)
+        return yf.download(
+            tickers=query_symbols if len(query_symbols) > 1 else query_symbols[0],
+            period=yf_period,
+            interval=interval,
+            group_by="ticker",
+            auto_adjust=True,
+            threads=True,
+            progress=False,
+        )
+
     def get_historical_data(
         self,
         symbol: str,
         start: str,
         end: str,
         interval: str = "1d",
+        period: str = "1y",
     ) -> pd.DataFrame:
+        """Fetch single-stock historical data. Prefers period= over start/end."""
         target_sym = symbol_registry.get_provider_symbol(symbol, "yfinance")
         df = pd.DataFrame()
 
-        # 1. Primary yfinance download (skip if permanent 401 encountered)
         if not self._yf_auth_failed:
             try:
-                df = yf.download(
+                # Use period= for reliability; start/end kept as fallback signature
+                raw = yf.download(
                     target_sym,
-                    start=start,
-                    end=end,
+                    period=_to_yf_period(period),
                     interval=interval,
-                    auto_adjust=False,
+                    auto_adjust=True,
                     progress=False,
                 )
+                # Single-ticker download may return a MultiIndex with the ticker name as level 0
+                if isinstance(raw.columns, pd.MultiIndex):
+                    if target_sym in raw.columns.get_level_values(0):
+                        raw = raw[target_sym]
+                    else:
+                        raw = raw.droplevel(0, axis=1) if raw.columns.nlevels > 1 else raw
+                df = raw.dropna(how="all")
             except Exception as dl_err:
                 err = classify_yfinance_error(symbol, dl_err)
                 self.last_errors[symbol] = err
                 if err.category == MarketDataErrorCategory.PROVIDER_AUTH_ERROR:
-                    logger.warning("[LiveDataProvider] yfinance auth failure on %s. Switching to backup provider.", symbol)
+                    logger.warning("[LiveDataProvider] yfinance auth failure on %s. Will retry next call.", symbol)
                     self._yf_auth_failed = True
                 else:
                     logger.debug("yf download error for %s: %s", target_sym, dl_err)
 
         if not df.empty:
+            # Ensure 'Close' column exists (auto_adjust renames 'Adj Close' → 'Close')
+            if "Close" not in df.columns and "Adj Close" in df.columns:
+                df = df.rename(columns={"Adj Close": "Close"})
             is_valid, reason, clean_df = validate_and_clean_price_series(symbol, df)
             if is_valid:
                 self.ticker_sources[symbol] = "yfinance"
@@ -210,7 +279,7 @@ class LiveDataProvider(MarketDataProvider):
                     message=f"Downloaded data failed validation: {reason}",
                 )
 
-        # 2. Backup provider fallback
+        # Backup provider fallback
         logger.info("Attempting backup provider for %s...", symbol)
         backup_df = self.backup_provider.get_historical_data(symbol, start, end, interval)
         if not backup_df.empty:
@@ -221,7 +290,7 @@ class LiveDataProvider(MarketDataProvider):
                 logger.info("Loaded '%s' from backup provider (%s).", symbol, source)
                 return clean_df
 
-        raise ValueError(f"No valid market data returned for '{symbol}' ({start} to {end}).")
+        raise ValueError(f"No valid market data returned for '{symbol}' (period={period}).")
 
     def get_bulk_historical_data(
         self,
@@ -229,15 +298,23 @@ class LiveDataProvider(MarketDataProvider):
         start: str,
         end: str,
         interval: str = "1d",
+        period: str = "1y",
     ) -> dict[str, pd.DataFrame]:
         now = time.time()
-        cache_key = (tuple(sorted(symbols)), start, end, interval)
+        sorted_syms = tuple(sorted(symbols))
+        # Support both date-based and period-based cache keys
+        cache_key_dates = (sorted_syms, start, end, interval)
+        cache_key_period = (sorted_syms, period, interval)
+        matched_key = cache_key_dates if cache_key_dates in self._cache else (cache_key_period if cache_key_period in self._cache else None)
 
         # 1. Check TTL Cache
-        if cache_key in self._cache:
-            ts, cached_data, cached_sources, cached_errors = self._cache[cache_key]
+        if matched_key:
+            ts, cached_data, cached_sources, cached_errors = self._cache[matched_key]
             if (now - ts) < CACHE_TTL_SECONDS and len(cached_data) >= len(symbols) * 0.7:
-                logger.info("Live bulk data served from memory cache (%d stocks, TTL: %ds)", len(cached_data), CACHE_TTL_SECONDS)
+                logger.info(
+                    "Live bulk data served from memory cache (%d stocks, TTL: %ds)",
+                    len(cached_data), CACHE_TTL_SECONDS,
+                )
                 self.ticker_sources = cached_sources.copy()
                 self.last_errors = cached_errors.copy()
                 self.last_cache_hit = True
@@ -248,65 +325,72 @@ class LiveDataProvider(MarketDataProvider):
         self.last_errors = {}
         self.ticker_sources = {}
 
-        # 2. Batch download via yfinance (if not auth blocked)
-        if not self._yf_auth_failed:
-            query_symbols = [symbol_registry.get_provider_symbol(s, "yfinance") for s in symbols]
-            try:
-                logger.info("Initiating high-speed batch download for %d symbols via yfinance...", len(query_symbols))
-                batch_df = yf.download(
-                    tickers=query_symbols,
-                    start=start,
-                    end=end,
-                    interval=interval,
-                    group_by="ticker",
-                    auto_adjust=False,
-                    threads=True,
-                    progress=False,
-                )
+        # 2. Batch download via yfinance (reset auth flag at start of each bulk run)
+        self._yf_auth_failed = False
+        query_symbols = [symbol_registry.get_provider_symbol(s, "yfinance") for s in symbols]
+        try:
+            logger.info(
+                "Initiating high-speed batch download for %d symbols via yfinance (period=%s)…",
+                len(query_symbols), period,
+            )
+            batch_df = self._yf_download_with_period(query_symbols, period, interval)
 
-                if not batch_df.empty:
-                    for orig_sym in symbols:
-                        q_sym = symbol_registry.get_provider_symbol(orig_sym, "yfinance")
-                        try:
-                            sub_df = pd.DataFrame()
-                            if hasattr(batch_df.columns, "levels") and q_sym in batch_df.columns.levels[0]:
+            if not batch_df.empty:
+                # Detect layout: MultiIndex (multi-ticker) vs flat (single ticker)
+                is_multi = isinstance(batch_df.columns, pd.MultiIndex)
+
+                for orig_sym in symbols:
+                    q_sym = symbol_registry.get_provider_symbol(orig_sym, "yfinance")
+                    try:
+                        sub_df = pd.DataFrame()
+
+                        if is_multi:
+                            lvl0 = batch_df.columns.get_level_values(0).unique()
+                            if q_sym in lvl0:
                                 sub_df = batch_df[q_sym].dropna(how="all").copy()
-                            elif "Close" in batch_df.columns and q_sym in batch_df["Close"].columns:
-                                close_s = batch_df["Close"][q_sym].dropna()
-                                if len(close_s) > 0:
-                                    sub_df = pd.DataFrame({
-                                        "Open": batch_df["Open"][q_sym] if "Open" in batch_df else close_s,
-                                        "High": batch_df["High"][q_sym] if "High" in batch_df else close_s,
-                                        "Low": batch_df["Low"][q_sym] if "Low" in batch_df else close_s,
-                                        "Close": close_s,
-                                        "Volume": batch_df["Volume"][q_sym] if "Volume" in batch_df else 0,
-                                        "Adj Close": close_s,
-                                    }).dropna(how="all")
+                            else:
+                                # Newer yfinance (≥0.2.37) swaps levels: metric on top, ticker below
+                                lvl1 = batch_df.columns.get_level_values(1).unique()
+                                if q_sym in lvl1:
+                                    sub_df = batch_df.xs(q_sym, level=1, axis=1).dropna(how="all").copy()
+                        else:
+                            # Single ticker was downloaded (shouldn't happen in bulk)
+                            sub_df = batch_df.dropna(how="all").copy()
 
-                            if not sub_df.empty:
-                                is_valid, _, clean_df = validate_and_clean_price_series(orig_sym, sub_df)
-                                if is_valid:
-                                    results[orig_sym] = clean_df
-                                    self.ticker_sources[orig_sym] = "yfinance"
-                        except Exception as parse_err:
-                            logger.debug("Parsing error for %s: %s", orig_sym, parse_err)
+                        # Normalise column names for auto_adjust=True output
+                        if not sub_df.empty:
+                            if "Close" not in sub_df.columns and "Adj Close" in sub_df.columns:
+                                sub_df = sub_df.rename(columns={"Adj Close": "Close"})
+                            if "Close" not in sub_df.columns:
+                                # Try to locate a Close-like column
+                                close_candidates = [c for c in sub_df.columns if "close" in str(c).lower()]
+                                if close_candidates:
+                                    sub_df = sub_df.rename(columns={close_candidates[0]: "Close"})
 
-            except Exception as batch_exc:
-                err = classify_yfinance_error("BULK_BATCH", batch_exc)
-                if err.category == MarketDataErrorCategory.PROVIDER_AUTH_ERROR:
-                    logger.warning("[LiveDataProvider] Batch download HTTP 401 Unauthorized: %s", batch_exc)
-                    self._yf_auth_failed = True
-                else:
-                    logger.warning("Bulk batch download failed, falling back: %s", batch_exc)
+                        if not sub_df.empty and "Close" in sub_df.columns:
+                            is_valid, _, clean_df = validate_and_clean_price_series(orig_sym, sub_df)
+                            if is_valid:
+                                results[orig_sym] = clean_df
+                                self.ticker_sources[orig_sym] = "yfinance"
+                    except Exception as parse_err:
+                        logger.debug("Parsing error for %s: %s", orig_sym, parse_err)
+
+        except Exception as batch_exc:
+            err = classify_yfinance_error("BULK_BATCH", batch_exc)
+            if err.category == MarketDataErrorCategory.PROVIDER_AUTH_ERROR:
+                logger.warning("[LiveDataProvider] Batch download HTTP 401: %s", batch_exc)
+                self._yf_auth_failed = True
+            else:
+                logger.warning("Bulk batch download failed, falling back: %s", batch_exc)
 
         # 3. Fallback for any missing stocks via individual worker / backup provider
         missing = [s for s in symbols if s not in results]
         if missing:
-            logger.info("Checking backup provider for %d missing/unauthorized tickers...", len(missing))
+            logger.info("Checking fallback for %d missing tickers…", len(missing))
 
             def _fetch_fallback(sym: str) -> tuple[str, Optional[pd.DataFrame], Optional[str], Optional[MarketDataError]]:
                 try:
-                    df = self.get_historical_data(sym, start, end, interval)
+                    df = self.get_historical_data(sym, start, end, interval, period=period)
                     src = self.ticker_sources.get(sym, "unknown")
                     return sym, df, src, None
                 except Exception as ex:
@@ -330,9 +414,11 @@ class LiveDataProvider(MarketDataProvider):
                     elif err:
                         self.last_errors[sym] = err
 
-        # 4. Update memory cache if at least some results returned
+        # 4. Update memory cache
         if len(results) > 0:
-            self._cache[cache_key] = (now, results, self.ticker_sources, self.last_errors)
+            cached_val = (now, results, self.ticker_sources.copy(), self.last_errors.copy())
+            self._cache[cache_key_dates] = cached_val
+            self._cache[cache_key_period] = cached_val
             logger.info("Successfully loaded %d / %d stocks in bulk.", len(results), len(symbols))
 
         return results

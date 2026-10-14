@@ -782,8 +782,31 @@
       // Populate dropdowns
       populateSelectionDropdowns();
 
-      // Ensure active selection is within universe
-      if (State.isDefaultSelection) {
+      // Check for URL parameters (?subset=TCS.NS,INFY.NS or ?sector=Banking or ?stock=TCS.NS)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlSubset = urlParams.get('subset');
+      const urlSector = urlParams.get('sector');
+      const urlStock = urlParams.get('stock');
+
+      if (urlSubset) {
+        const tickers = urlSubset.split(',').map((s) => s.trim()).filter((s) => State.allUniverseTickers.includes(s));
+        if (tickers.length > 0) {
+          State.selectedTickers = new Set(tickers);
+          State.isDefaultSelection = false;
+        }
+      } else if (urlSector) {
+        const sectorObj = State.allSectors.find((s) => s.sector.toLowerCase() === urlSector.toLowerCase());
+        if (sectorObj && sectorObj.stock_symbols) {
+          State.selectedTickers = new Set(sectorObj.stock_symbols);
+          State.isDefaultSelection = false;
+          window.TradeSenseMarketRel.setSelectionMode('sector');
+          const secSelect = document.getElementById('sector-dropdown');
+          if (secSelect) secSelect.value = sectorObj.sector;
+        }
+      } else if (urlStock && State.allUniverseTickers.includes(urlStock)) {
+        window.TradeSenseMarketRel.onSingleStockSelected(urlStock);
+        return;
+      } else if (State.isDefaultSelection) {
         const validDefault = DEFAULT_SUBSET.filter((s) => State.allUniverseTickers.includes(s));
         State.selectedTickers = new Set(validDefault.length >= 3 ? validDefault : State.allUniverseTickers.slice(0, 10));
       }
