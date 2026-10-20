@@ -76,26 +76,6 @@
         </div>
       </div>
 
-      <!-- Plain Language WHAT THIS MEANS / WHY IT MATTERS Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1 text-xs">
-        <div class="p-4 rounded-xl bg-indigo-50/70 border border-indigo-100 space-y-1.5">
-          <div class="font-bold text-indigo-900 uppercase tracking-wide flex items-center gap-1.5">
-            <span>💡</span> WHAT THIS MEANS
-          </div>
-          <p id="what-this-means-text" class="text-slate-700 leading-relaxed text-[11px]">
-            Loading calculated market insights...
-          </p>
-        </div>
-
-        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
-          <div class="font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
-            <span>🎯</span> WHY IT MATTERS
-          </div>
-          <p id="why-it-matters-text" class="text-slate-700 leading-relaxed text-[11px]">
-            Loading investment takeaways...
-          </p>
-        </div>
-      </div>
     </div>
 
     <!-- Co-Moving Stock Groups & Unclustered Stocks (4 cols) -->
@@ -176,25 +156,6 @@ async function loadNetworkPage(threshold = 0.70) {
     document.getElementById('unclustered-thresh-label').textContent = threshold.toFixed(2);
     document.getElementById('unclustered-count').textContent = unclustered.length;
 
-    // Plain English WHAT THIS MEANS
-    const meansEl = document.getElementById('what-this-means-text');
-    if (meansEl) {
-      if (edgeCount === 0) {
-        meansEl.innerHTML = `Under correlation cutoff <strong>r ≥ ${threshold.toFixed(2)}</strong>, no stock pair shares strong enough synchronization to form a connection. All <strong>${vertCount} stocks</strong> are behaving independently.`;
-      } else {
-        meansEl.innerHTML = `Our analysis identified <strong>${edgeCount} strong connections</strong> across <strong>${vertCount} stocks</strong> (network density: <strong>${densityPct}%</strong>). Stocks cluster into <strong>${clusters.length} distinct co-moving groups</strong>.`;
-      }
-    }
-
-    // Plain English WHY IT MATTERS
-    const mattersEl = document.getElementById('why-it-matters-text');
-    if (mattersEl) {
-      if (clusters.length > 0) {
-        mattersEl.innerHTML = `Holding stocks from the same co-movement cluster increases portfolio vulnerability. For resilient risk reduction, combine stocks across different clusters or pick from the <strong>${unclustered.length} unclustered diversifiers</strong>.`;
-      } else {
-        mattersEl.innerHTML = `When connection density is 0%, combining these assets provides natural protection because no single asset movement automatically pulls the others down.`;
-      }
-    }
 
     // Render Network Graph
     TradeSense.renderNetworkGraph('market-network-plot', res);
