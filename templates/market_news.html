@@ -127,10 +127,10 @@ function filterNews() {
     const matchSector = (sector === 'ALL' || item.sector === sector);
     const matchSentiment = (sentiment === 'ALL' || item.sentiment === sentiment);
     const matchQuery = !query || 
-      item.headline.toLowerCase().includes(query) || 
-      item.summary.toLowerCase().includes(query) || 
-      item.symbol.toLowerCase().includes(query) || 
-      item.stock_name.toLowerCase().includes(query);
+      ((item.headline || '').toLowerCase().includes(query)) || 
+      ((item.summary || '').toLowerCase().includes(query)) || 
+      ((item.symbol || '').toLowerCase().includes(query)) || 
+      ((item.stock_name || '').toLowerCase().includes(query));
     return matchSector && matchSentiment && matchQuery;
   });
 

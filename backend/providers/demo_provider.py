@@ -26,7 +26,7 @@ from .base_provider import MarketDataProvider
 # Constants
 # ---------------------------------------------------------------------------
 
-TRADING_DAYS: int = 252  # synthetic history length
+TRADING_DAYS: int = 1260  # synthetic history length (up to 5 years)
 
 # 12 hardcoded NSE tickers with approximate base prices (INR)
 _TICKERS: dict[str, float] = {

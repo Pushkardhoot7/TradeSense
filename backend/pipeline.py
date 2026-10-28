@@ -29,7 +29,9 @@ PROJECT_ROOT  = Path(__file__).parent.parent
 UNIVERSE_CSV  = PROJECT_ROOT / "data" / "stock_universe.csv"
 
 _PERIOD_DAYS: dict[str, int] = {
-    "1m": 30, "3m": 90, "6m": 180,
+    "1m": 30, "1mo": 30,
+    "3m": 90, "3mo": 90,
+    "6m": 180, "6mo": 180,
     "1y": 365, "2y": 730, "3y": 1095, "5y": 1825,
 }
 
